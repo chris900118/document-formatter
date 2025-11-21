@@ -1,0 +1,24 @@
+appId: com.documentformatter.app
+productName: 公文格式化助手
+directories:
+  output: release
+files:
+  - dist/**/*
+  - dist-electron/**/*
+win:
+  target:
+    - target: dir
+      arch:
+        - x64
+
+extraResources:
+  - from: scripts
+    to: scripts
+    filter:
+      - '**/*'
+  - from: resources
+    to: resources
+    filter:
+      - '**/*'
+# 跳过代码签名
+forceCodeSigning: false

@@ -1,0 +1,272 @@
+import { useState, useRef } from 'react'
+import { IoCloudUploadOutline, IoDocumentTextOutline, IoCloseCircleOutline, IoCloudDownloadOutline, IoInformationCircleOutline } from 'react-icons/io5'
+import { useProfileStore } from '@/store/profileStore'
+import { ProcessStatus } from '@/types/profile'
+
+export function PageHome() {
+  const {
+    profiles,
+    selectedProfileId,
+    currentFile,
+    processStatus,
+    processMessage,
+    outputPath,
+    selectProfile,
+    setCurrentFile,
+    setProcessStatus,
+    setOutputPath,
+  } = useProfileStore()
+
+  const [isDragging, setIsDragging] = useState(false)
+
+  const selectedProfile = profiles.find((p) => p.id === selectedProfileId)
+
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // 处理文件选择
+  const handleFileSelect = (file: File) => {
+    if (!file.name.endsWith('.docx')) {
+      alert('仅支持 .docx 格式的文件')
+      return
+    }
+    setCurrentFile({
+      name: file.name,
+      path: (file as any).path || '', // Electron 会提供 path 属性
+      size: file.size,
+    })
+    setProcessStatus(ProcessStatus.IDLE)
+    setOutputPath(null)
+  }
+
+  // 点击上传
+  const handleClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  // 处理拖拽
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragging(false)
+    
+    const file = e.dataTransfer.files[0]
+    if (file) {
+      handleFileSelect(file)
+    }
+  }
+
+  // 移除文件
+  const handleRemoveFile = () => {
+    setCurrentFile(null)
+    setProcessStatus(ProcessStatus.IDLE)
+    setOutputPath(null)
+  }
+
+  // 开始格式化
+  const handleFormat = async () => {
+    if (!currentFile || !selectedProfileId) return
+
+    // 获取选中的规范
+    const profile = profiles.find((p) => p.id === selectedProfileId)
+    if (!profile) return
+
+    setProcessStatus(ProcessStatus.PROCESSING, '正在处理文档...')
+    
+    try {
+      const result = await window.electronAPI.formatDocument(currentFile.path, profile)
+      
+      if (result.success) {
+        setProcessStatus(ProcessStatus.SUCCESS, result.message)
+        if (result.outputPath) {
+          setOutputPath(result.outputPath)
+        }
+      } else {
+        setProcessStatus(ProcessStatus.ERROR, result.message)
+      }
+    } catch (error: any) {
+      setProcessStatus(ProcessStatus.ERROR, error.message || '处理失败')
+    }
+  }
+
+  // 下载文件
+  const handleDownload = async () => {
+    if (!outputPath) return
+    
+    // 打开文件所在文件夹
+    await window.electronAPI.openFile(outputPath)
+    
+    // 重置状态
+    setProcessStatus(ProcessStatus.IDLE)
+    setCurrentFile(null)
+    setOutputPath(null)
+  }
+
+  const isProcessing = processStatus === ProcessStatus.PROCESSING
+  const isSuccess = processStatus === ProcessStatus.SUCCESS
+
+  return (
+    <div className="max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold text-gray-900 mb-8">开始格式化文档</h1>
+
+      <div className="space-y-6">
+        {/* 文件上传区 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>选择文件</CardTitle>
+            <CardDescription>支持 .docx 格式的 Word 文档</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div
+              className={cn(
+                'border-2 border-dashed rounded-lg p-12 text-center transition-colors',
+                isDragging
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-300 hover:border-gray-400'
+              )}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+            >
+              {currentFile ? (
+                <div className="space-y-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100">
+                    <FileText className="w-8 h-8 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-gray-900">{currentFile.name}</p>
+                    <p className="text-sm text-gray-500 mt-1">{currentFile.path}</p>
+                  </div>
+                  <Button variant="outline" onClick={handleFileSelect}>
+                    更换文件
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gray-100">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-medium text-gray-900">拖拽文件到这里</p>
+                    <p className="text-sm text-gray-500 mt-1">或者点击按钮选择文件</p>
+                  </div>
+                  <Button onClick={handleFileSelect}>选择文件</Button>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 规范选择 */}
+        <Card>
+          <CardHeader>
+            <CardTitle>选择格式规范</CardTitle>
+            <CardDescription>选择要应用的格式化规范</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {profiles.map((profile) => (
+                <button
+                  key={profile.id}
+                  onClick={() => selectProfile(profile.id)}
+                  className={cn(
+                    'p-4 rounded-lg border-2 text-left transition-all',
+                    selectedProfileId === profile.id
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-gray-200 hover:border-gray-300'
+                  )}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-900">{profile.name}</h4>
+                      {profile.description && (
+                        <p className="text-sm text-gray-500 mt-1">{profile.description}</p>
+                      )}
+                      <div className="flex items-center gap-2 mt-2 text-xs text-gray-400">
+                        <span>{profile.fontFamily}</span>
+                        <span>•</span>
+                        <span>{profile.fontSize}磅</span>
+                        <span>•</span>
+                        <span>{profile.lineSpacing}倍行距</span>
+                      </div>
+                    </div>
+                    {selectedProfileId === profile.id && (
+                      <Check className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* 操作按钮和状态 */}
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <Button
+                size="lg"
+                className="w-full"
+                onClick={handleFormat}
+                disabled={!currentFile || !selectedProfileId || processStatus === ProcessStatus.PROCESSING}
+              >
+                {processStatus === ProcessStatus.PROCESSING ? '处理中...' : '开始格式化'}
+              </Button>
+
+              {/* 状态消息 */}
+              {processStatus !== ProcessStatus.IDLE && (
+                <div
+                  className={cn(
+                    'p-4 rounded-lg flex items-start gap-3',
+                    processStatus === ProcessStatus.SUCCESS && 'bg-green-50 border border-green-200',
+                    processStatus === ProcessStatus.ERROR && 'bg-red-50 border border-red-200',
+                    processStatus === ProcessStatus.PROCESSING && 'bg-blue-50 border border-blue-200'
+                  )}
+                >
+                  {processStatus === ProcessStatus.SUCCESS && (
+                    <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  )}
+                  {processStatus === ProcessStatus.ERROR && (
+                    <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  )}
+                  {processStatus === ProcessStatus.PROCESSING && (
+                    <div className="w-5 h-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                  )}
+                  <div className="flex-1">
+                    <p
+                      className={cn(
+                        'font-medium',
+                        processStatus === ProcessStatus.SUCCESS && 'text-green-900',
+                        processStatus === ProcessStatus.ERROR && 'text-red-900',
+                        processStatus === ProcessStatus.PROCESSING && 'text-blue-900'
+                      )}
+                    >
+                      {processMessage}
+                    </p>
+                    {outputPath && (
+                      <p className="text-sm text-gray-600 mt-1 font-mono break-all">{outputPath}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}

@@ -1,0 +1,55 @@
+# --- 核心依赖与环境 ---
+node_modules/
+.env
+.DS_Store
+
+# --- Electron & Vite 构建输出 ---
+dist/
+dist-electron/
+release/
+
+# --- Python 相关 (根据你的 python_processor 目录定制) ---
+# Python 编译缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Python 虚拟环境 (你代码中提到了 venv/env)
+venv/
+env/
+.Python
+build/
+develop-eggs/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# --- PyInstaller 打包产生的临时文件 ---
+python_processor/build/
+python_processor/dist/
+*.spec
+
+# --- 生成的二进制文件 (关键！) ---
+# formatter.exe 是通过 npm run python:build 生成的，不应上传源码仓库
+# 除非你想让别人不用配置 Python 环境也能跑，否则建议忽略
+scripts/*.exe
+scripts/formatter
+
+# --- 日志文件 ---
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# --- 项目代码快照 (非常重要，否则仓库会很大) ---
+project_full_code.txt
+# --- 修正后的忽略规则 ---
+release*/
+error_log*.txt
+scripts/test_output.json

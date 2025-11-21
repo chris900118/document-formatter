@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>公文格式化助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        /* --- 桌面端核心样式 --- */
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F2F3F5; overflow: hidden; user-select: none; }
+        
+        /* 自定义滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #C9CDD4; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #86909C; }
+
+        /* 布局框架 */
+        .app-shell { display: flex; height: 100vh; width: 100vw; }
+        .sidebar { width: 240px; background: #F7F8FA; border-right: 1px solid #E5E6EB; display: flex; flex-direction: column; padding-top: 32px; flex-shrink: 0; }
+        .main-container { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
+        
+        /* 导航项 */
+        .nav-item { display: flex; align-items: center; gap: 10px; height: 40px; padding: 0 16px; margin: 4px 12px; border-radius: 6px; color: #4E5969; font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+        .nav-item:hover { background: #E5E6EB; }
+        .nav-item.active { background: #E8F3FF; color: #165DFF; }
+        
+        /* 拖拽区域 */
+        .drag-region { -webkit-app-region: drag; height: 32px; position: absolute; top: 0; left: 0; right: 0; z-index: 50; }
+    </style>
+</head>
+<body>
+    <div class="drag-region"></div>
+    <div class="app-shell">
+        <!-- 侧边栏 -->
+        <aside class="sidebar">
+            <div class="px-6 mb-8 flex items-center gap-3">
+                <div class="w-8 h-8 bg-[#165DFF] rounded-lg flex items-center justify-center text-white"><i data-lucide="file-text" class="w-5 h-5"></i></div>
+                <span class="font-bold text-lg text-gray-900">公文助手</span>
+            </div>
+            <nav>
+                <div class="px-4 text-xs text-gray-400 font-bold uppercase mb-2">工作台</div>
+                <div class="nav-item active" id="nav-home"><i data-lucide="home" class="w-4 h-4"></i> 开始任务</div>
+                <div class="nav-item" id="nav-spec"><i data-lucide="layout-grid" class="w-4 h-4"></i> 规范管理</div>
+            </nav>
+        </aside>
+
+        <!-- 主内容区 (动态替换这里) -->
+        <main class="main-container" id="app-content">
+            <!-- 内容将注入这里 -->
+        </main>
+    </div>
+    <script>lucide.createIcons();</script>
+</body>
+</html>

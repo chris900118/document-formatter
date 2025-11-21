@@ -1,0 +1,318 @@
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
+import {
+  Typography,
+  Button,
+  Layout,
+  Menu,
+  Form,
+  Input,
+  InputNumber,
+  Select,
+  Switch,
+  Space,
+  Message,
+  Divider,
+} from '@arco-design/web-react'
+import { IconSave, IconClose } from '@arco-design/web-react/icon'
+import { useProfileStore } from '@/store/profileStore'
+import { FormatProfile } from '@/types/profile'
+
+const { Title, Text } = Typography
+const { Sider, Content } = Layout
+const FormItem = Form.Item
+const { Option } = Select
+const MenuItem = Menu.Item
+
+export function PageProfileEditor() {
+  const navigate = useNavigate()
+  const { id } = useParams<{ id: string }>()
+  const { addProfile, updateProfile, getProfileById } = useProfileStore()
+  const [form] = Form.useForm()
+  const [activeSection, setActiveSection] = useState('basic')
+
+  const isEditing = id !== 'new'
+  const existingProfile = isEditing ? getProfileById(id!) : null
+  const isReadOnly = existingProfile?.isDefault || false
+
+  const defaultValues: Partial<FormatProfile> = {
+    name: '',
+    description: '',
+    styles: {
+      documentTitle: { fontFamily: '方正小标宋简体', fontSize: 22, lineSpacing: 35, alignment: 'center' },
+      recipient: { fontFamily: '方正仿宋', fontSize: 16, lineSpacing: 28, alignment: 'left', spaceBefore: 28 },
+      body: { fontFamily: '方正仿宋', fontSize: 16, lineSpacing: 28, firstLineIndent: 2 },
+      heading1: { fontFamily: '方正黑体', fontSize: 16, lineSpacing: 28 },
+      heading2: { fontFamily: '方正楷体', fontSize: 16, lineSpacing: 28 },
+      heading3: { fontFamily: '方正仿宋', fontSize: 16, lineSpacing: 28 },
+      heading4: { fontFamily: '方正仿宋', fontSize: 16, lineSpacing: 28 },
+      signatureOrg: { fontFamily: '方正仿宋', fontSize: 16, alignment: 'right' },
+      signatureDate: { fontFamily: '方正仿宋', fontSize: 16, alignment: 'right' },
+    },
+    specialRules: {
+      autoTimesNewRoman: true,
+      pageNumbering: {
+        enabled: true,
+        format: '- {page} -',
+        startFromSecondPage: true,
+      },
+      attachment: {
+        enabled: true,
+        keywords: ['附件：', '附件1', '附件2'],
+        fontFamily: '方正小标宋简体',
+        fontSize: 22,
+      },
+    },
+    pageMargins: {
+      top: 37,
+      bottom: 35,
+      left: 28,
+      right: 26,
+    },
+  }
+
+  useEffect(() => {
+    if (existingProfile) {
+      form.setFieldsValue(existingProfile)
+    } else {
+      form.setFieldsValue(defaultValues)
+    }
+  }, [existingProfile, form])
+
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validate()
+      
+      const profileData: Omit<FormatProfile, 'id' | 'createdAt' | 'updatedAt'> = {
+        name: values.name,
+        description: values.description || '',
+        styles: values.styles,
+        specialRules: values.specialRules,
+        pageMargins: values.pageMargins,
+        isDefault: false,
+      }
+
+      if (isEditing && existingProfile) {
+        updateProfile(existingProfile.id, profileData)
+        Message.success('规范更新成功')
+      } else {
+        addProfile(profileData)
+        Message.success('规范创建成功')
+      }
+
+      navigate('/profiles')
+    } catch (error) {
+      Message.error('请检查表单填写')
+    }
+  }
+
+  const fontOptions = [
+    '方正小标宋简体',
+    '方正仿宋',
+    '方正黑体',
+    '方正楷体',
+    'Times New Roman',
+    '宋体',
+    '黑体',
+    '楷体',
+  ]
+
+  const alignmentOptions = [
+    { label: '左对齐', value: 'left' },
+    { label: '居中', value: 'center' },
+    { label: '右对齐', value: 'right' },
+    { label: '两端对齐', value: 'justify' },
+  ]
+
+  const menuItems = [
+    { key: 'basic', label: '基本信息' },
+    { key: 'documentTitle', label: '文档标题' },
+    { key: 'recipient', label: '主送机关' },
+    { key: 'body', label: '正文段落' },
+    { key: 'heading1', label: '一级标题' },
+    { key: 'heading2', label: '二级标题' },
+    { key: 'heading3', label: '三级标题' },
+    { key: 'heading4', label: '四级标题' },
+    { key: 'signature', label: '落款样式' },
+    { key: 'specialRules', label: '特殊规则' },
+    { key: 'pageMargins', label: '页边距' },
+  ]
+
+  const renderStyleFields = (prefix: string, showExtra?: 'firstLineIndent' | 'spaceBefore') => (
+    <Space direction="vertical" size="large" style={{ width: '100%' }}>
+      <Space size="large" style={{ width: '100%' }}>
+        <FormItem label="字体" field={`${prefix}.fontFamily`} disabled={isReadOnly} style={{ flex: 1 }}>
+          <Select placeholder="选择字体">
+            {fontOptions.map((font) => (
+              <Option key={font} value={font}>{font}</Option>
+            ))}
+          </Select>
+        </FormItem>
+        <FormItem label="字号(磅)" field={`${prefix}.fontSize`} disabled={isReadOnly} style={{ width: 120 }}>
+          <InputNumber min={8} max={72} />
+        </FormItem>
+      </Space>
+      <Space size="large" style={{ width: '100%' }}>
+        <FormItem label="行距(磅)" field={`${prefix}.lineSpacing`} disabled={isReadOnly} style={{ width: 120 }}>
+          <InputNumber min={12} max={100} />
+        </FormItem>
+        <FormItem label="对齐方式" field={`${prefix}.alignment`} disabled={isReadOnly} style={{ flex: 1 }}>
+          <Select placeholder="选择对齐方式">
+            {alignmentOptions.map((opt) => (
+              <Option key={opt.value} value={opt.value}>{opt.label}</Option>
+            ))}
+          </Select>
+        </FormItem>
+      </Space>
+      {showExtra === 'firstLineIndent' && (
+        <FormItem label="首行缩进(字符)" field={`${prefix}.firstLineIndent`} disabled={isReadOnly} style={{ width: 120 }}>
+          <InputNumber min={0} max={10} />
+        </FormItem>
+      )}
+      {showExtra === 'spaceBefore' && (
+        <FormItem label="段前距(磅)" field={`${prefix}.spaceBefore`} disabled={isReadOnly} style={{ width: 120 }}>
+          <InputNumber min={0} max={100} />
+        </FormItem>
+      )}
+    </Space>
+  )
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'basic':
+        return (
+          <>
+            <FormItem label="规范名称" field="name" rules={[{ required: true, message: '请输入规范名称' }]} disabled={isReadOnly}>
+              <Input placeholder="例如：成都兴城集团规范" size="large" />
+            </FormItem>
+            <FormItem label="描述" field="description" disabled={isReadOnly}>
+              <Input.TextArea placeholder="规范的简要说明（可选）" rows={4} />
+            </FormItem>
+          </>
+        )
+      case 'documentTitle':
+        return renderStyleFields('styles.documentTitle')
+      case 'recipient':
+        return renderStyleFields('styles.recipient', 'spaceBefore')
+      case 'body':
+        return renderStyleFields('styles.body', 'firstLineIndent')
+      case 'heading1':
+        return renderStyleFields('styles.heading1')
+      case 'heading2':
+        return renderStyleFields('styles.heading2')
+      case 'heading3':
+        return renderStyleFields('styles.heading3')
+      case 'heading4':
+        return renderStyleFields('styles.heading4')
+      case 'signature':
+        return (
+          <>
+            <Text style={{ display: 'block', marginBottom: 16, fontSize: 14, color: 'var(--color-text-3)' }}>
+              落款单位
+            </Text>
+            {renderStyleFields('styles.signatureOrg')}
+            <Divider />
+            <Text style={{ display: 'block', marginBottom: 16, fontSize: 14, color: 'var(--color-text-3)' }}>
+              落款日期
+            </Text>
+            {renderStyleFields('styles.signatureDate')}
+          </>
+        )
+      case 'specialRules':
+        return (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <FormItem label="数字和字母自动 Times New Roman" field="specialRules.autoTimesNewRoman" triggerPropName="checked" disabled={isReadOnly}>
+              <Switch />
+            </FormItem>
+            <FormItem label="启用页码" field="specialRules.pageNumbering.enabled" triggerPropName="checked" disabled={isReadOnly}>
+              <Switch />
+            </FormItem>
+            <FormItem label="页码格式" field="specialRules.pageNumbering.format" disabled={isReadOnly}>
+              <Input placeholder="例如：- {page} -" />
+            </FormItem>
+            <FormItem label="从第二页开始编号" field="specialRules.pageNumbering.startFromSecondPage" triggerPropName="checked" disabled={isReadOnly}>
+              <Switch />
+            </FormItem>
+          </Space>
+        )
+      case 'pageMargins':
+        return (
+          <Space direction="vertical" size="large" style={{ width: '100%' }}>
+            <Space size="large">
+              <FormItem label="上边距 (mm)" field="pageMargins.top" disabled={isReadOnly} style={{ width: 150 }}>
+                <InputNumber min={0} max={100} />
+              </FormItem>
+              <FormItem label="下边距 (mm)" field="pageMargins.bottom" disabled={isReadOnly} style={{ width: 150 }}>
+                <InputNumber min={0} max={100} />
+              </FormItem>
+            </Space>
+            <Space size="large">
+              <FormItem label="左边距 (mm)" field="pageMargins.left" disabled={isReadOnly} style={{ width: 150 }}>
+                <InputNumber min={0} max={100} />
+              </FormItem>
+              <FormItem label="右边距 (mm)" field="pageMargins.right" disabled={isReadOnly} style={{ width: 150 }}>
+                <InputNumber min={0} max={100} />
+              </FormItem>
+            </Space>
+          </Space>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div style={{ height: 'calc(100vh - 80px)' }}>
+      {/* 顶部操作栏 */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 24,
+        padding: '16px 24px',
+        backgroundColor: '#fff',
+        borderRadius: 8,
+      }}>
+        <Title heading={3} style={{ margin: 0 }}>
+          {isEditing ? (isReadOnly ? '查看规范' : '编辑规范') : '新建规范'}
+        </Title>
+        <Space>
+          <Button icon={<IconClose />} onClick={() => navigate('/profiles')}>
+            取消
+          </Button>
+          {!isReadOnly && (
+            <Button type="primary" icon={<IconSave />} onClick={handleSubmit}>
+              保存
+            </Button>
+          )}
+        </Space>
+      </div>
+
+      {/* 主体布局：左侧菜单 + 右侧内容 */}
+      <Layout style={{ height: 'calc(100% - 80px)', backgroundColor: '#fff', borderRadius: 8 }}>
+        <Sider
+          width={220}
+          style={{
+            backgroundColor: 'var(--color-fill-2)',
+            borderRight: '1px solid var(--color-border-2)',
+          }}
+        >
+          <Menu
+            selectedKeys={[activeSection]}
+            onClickMenuItem={(key) => setActiveSection(key)}
+            style={{ backgroundColor: 'transparent', border: 'none' }}
+          >
+            {menuItems.map((item) => (
+              <MenuItem key={item.key}>{item.label}</MenuItem>
+            ))}
+          </Menu>
+        </Sider>
+        <Content style={{ padding: '32px 40px', overflow: 'auto' }}>
+          <Form form={form} layout="vertical" autoComplete="off">
+            {renderContent()}
+          </Form>
+        </Content>
+      </Layout>
+    </div>
+  )
+}

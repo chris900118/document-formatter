@@ -1,0 +1,5 @@
+layout.html (把 1. 公共基础样式 (Global CSS & Shell) 的代码粘贴进去)
+home.html (把 2. 页面一：首页/上传 的代码粘贴进去)
+loading.html (把 3. 页面二：AI 加载中 的代码粘贴进去)
+correction.html (把 4. 页面三：纠偏确认 的代码粘贴进去)
+manager.html (把 5. 页面四：规范管理 的代码粘贴进去)

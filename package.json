@@ -1,0 +1,105 @@
+{
+  "name": "document-formatter",
+  "version": "1.0.2",
+  "description": "公文格式化助手 - 基于 Electron + React 的文档格式化工具",
+  "main": "dist-electron/main.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:utf8": "powershell -NoProfile -NonInteractive -Command \"chcp 65001 | Out-Null; [Console]::InputEncoding=[Text.Encoding]::UTF8; [Console]::OutputEncoding=[Text.Encoding]::UTF8; $env:PYTHONIOENCODING='utf-8'; npm run dev\"",
+    "build": "tsc && vite build && electron-builder",
+    "build:win": "tsc && vite build && electron-builder --win",
+    "build:portable": "tsc && vite build && electron-builder --win portable",
+    "build:mac": "tsc && vite build && electron-builder --mac",
+    "preview": "vite preview",
+    "electron:dev:raw": "concurrently \"vite\" \"wait-on tcp:5173 && electron .\"",
+    "electron:dev": "powershell -NoProfile -NonInteractive -Command \"chcp 65001 | Out-Null; [Console]::InputEncoding=[Text.Encoding]::UTF8; [Console]::OutputEncoding=[Text.Encoding]::UTF8; $env:PYTHONIOENCODING='utf-8'; npm run electron:dev:raw\"",
+    "python:setup": "cd python_processor && pip install -r requirements.txt",
+    "python:build": "cd python_processor && build.bat",
+    "python:build:mac": "cd python_processor && chmod +x build.sh && ./build.sh",
+    "dump:code": "node scripts/dump-project.ts"
+  },
+  "keywords": [
+    "electron",
+    "react",
+    "document",
+    "formatter",
+    "docx"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "@arco-design/web-react": "^2.66.8",
+    "electron-store": "^11.0.2",
+    "iconv-lite": "^0.6.3",
+    "lucide-react": "^0.553.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^7.9.6",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.22",
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.18",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.8",
+    "vite-plugin-electron": "^0.28.2",
+    "vite-plugin-electron-renderer": "^0.14.5",
+    "wait-on": "^7.2.0"
+  },
+  "build": {
+    "appId": "com.documentformatter.app",
+    "productName": "公文格式化助手",
+    "compression": "maximum",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "dist-electron/**/*"
+    ],
+    "afterPack": "scripts/afterPack-optimize.cjs",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "public/icon.ico"
+    },
+    "portable": {
+      "artifactName": "${productName}-${version}-Portable.${ext}"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "public/icon.icns"
+    },
+    "extraResources": [
+      {
+        "from": "scripts",
+        "to": "scripts",
+        "filter": [
+          "**/*"
+        ]
+      },
+      {
+        "from": "resources/程序功能介绍.html",
+        "to": "程序功能介绍.html"
+      }
+    ]
+  }
+}

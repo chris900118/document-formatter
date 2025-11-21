@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公文格式化助手 - 修复版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <style>
+        /* --- 1. 基础设置 --- */
+        body { 
+            font-family: 'Inter', system-ui, sans-serif; 
+            background-color: #fff; 
+            user-select: none; 
+            cursor: default;
+            margin: 0; padding: 0;
+            overflow: hidden; /* 禁止 body 滚动 */
+            height: 100vh; width: 100vw;
+        }
+
+        /* 细滚动条 */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+
+        /* --- 2. 布局框架 --- */
+        .app-shell { display: flex; height: 100%; width: 100%; }
+        
+        /* 左侧侧边栏 */
+        .sidebar { 
+            width: 240px; background: #F7F8FA; border-right: 1px solid #E5E6EB; 
+            display: flex; flex-direction: column; padding-top: 20px;
+            flex-shrink: 0; /* 防止被压缩 */
+        }
+        
+        /* 右侧主内容容器 */
+        .main-wrapper { 
+            flex: 1; 
+            background: #fff; 
+            position: relative; 
+            overflow: hidden; /* 内部页面自己处理滚动 */
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* --- 3. 页面切换系统 (核心修复) --- */
+        .page-view { 
+            /* 默认隐藏 */
+            display: none; 
+            /* 激活后属性见 .active */
+            flex: 1; 
+            flex-direction: column;
+            overflow-y: auto; /* 页面内部滚动 */
+            padding: 32px;
+            height: 100%; /* 强制占满 */
+            animation: fadeIn 0.2s ease-out;
+        }
+        
+        /* 激活状态：使用 Flex 布局防止塌陷 */
+        .page-view.active { display: flex; }
+
+        @keyframes fadeIn { from { opacity: 0.9; transform: translateY(2px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- 4. 组件样式 --- */
+        /* 导航项 */
+        .nav-item {
+            display: flex; align-items: center; gap: 10px; padding: 10px 20px; margin: 4px 12px;
+            border-radius: 6px; color: #4E5969; font-size: 13px; font-weight: 500; cursor: pointer;
+            transition: all 0.15s;
+        }
+        .nav-item:hover { background: #E5E6EB; color: #1D2129; }
+        .nav-item.active { background: #E8F3FF; color: #165DFF; font-weight: 600; }
+        .nav-item.active i { color: #165DFF; }
+
+        /* 内部 Tab (全部/启用中...) */
+        .sub-tab-btn {
+            padding: 8px 16px; font-size: 14px; font-weight: 500; color: #86909C;
+            border-bottom: 2px solid transparent; cursor: pointer; transition: all 0.2s;
+        }
+        .sub-tab-btn:hover { color: #4E5969; background: #F7F8FA; border-radius: 4px 4px 0 0; }
+        .sub-tab-btn.active { color: #165DFF; border-bottom-color: #165DFF; }
+
+        /* 规范卡片 */
+        .card-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); 
+            gap: 20px; padding-bottom: 40px;
+        }
+        .spec-card {
+            background: #fff; border: 1px solid #E5E6EB; border-radius: 12px;
+            padding: 20px; position: relative; transition: all 0.2s;
+            display: flex; flex-direction: column;
+        }
+        .spec-card:hover { border-color: #C9CDD4; box-shadow: 0 4px 16px rgba(0,0,0,0.06); transform: translateY(-2px); }
+        .spec-card.default { border: 1px solid #94BFFF; background: #F0F6FF; }
+
+        /* 悬浮操作按钮 */
+        .card-actions {
+            position: absolute; top: 16px; right: 16px; display: flex; gap: 8px;
+            opacity: 0; transition: opacity 0.2s;
+        }
+        .spec-card:hover .card-actions { opacity: 1; }
+        .action-btn {
+            width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+            background: white; border: 1px solid #E5E6EB; border-radius: 6px; color: #4E5969; cursor: pointer;
+        }
+        .action-btn:hover { border-color: #165DFF; color: #165DFF; }
+        .action-btn.danger:hover { border-color: #F53F3F; color: #F53F3F; }
+
+        /* 微缩矩阵 */
+        .preview-box { border: 1px solid #F2F3F5; border-radius: 8px; margin-top: 16px; overflow: hidden; }
+        .preview-row { 
+            display: grid; grid-template-columns: 60px 1fr 90px 24px; 
+            align-items: center; gap: 10px; padding: 8px 12px; 
+            border-bottom: 1px dashed #F2F3F5; font-size: 12px; background: #fff;
+        }
+        .row-param { font-family: monospace; background: #F7F8FA; border: 1px solid #E5E6EB; padding: 1px 4px; border-radius: 3px; text-align: center; color: #4E5969; }
+        
+        /* 上传区域 */
+        .drop-zone {
+            border: 2px dashed #C9CDD4; background: #FFFFFF; border-radius: 12px;
+            background-image: repeating-linear-gradient(45deg, #F9FAFB 0, #F9FAFB 10px, #FFFFFF 10px, #FFFFFF 20px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;
+            transition: all 0.2s;
+        }
+        .drop-zone:hover { border-color: #165DFF; background-color: #F0F6FF; background-image: none; }
+    </style>
+</head>
+<body>
+
+    <div class="app-shell">
+        <!-- 左侧导航 -->
+        <aside class="sidebar">
+            <div class="px-6 mb-8 flex items-center gap-3 text-gray-900 font-bold text-xl">
+                <div class="w-8 h-8 bg-[#165DFF] rounded-lg flex items-center justify-center text-white shadow-lg shadow-blue-500/30">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                </div>
+                公文助手
+            </div>
+            
+            <nav class="flex-1 space-y-1">
+                <div class="px-6 text-[10px] text-gray-400 font-bold uppercase mb-2 tracking-widest">MENU</div>
+                
+                <!-- 加上 ID 方便 JS 选中 -->
+                <div id="nav-home" class="nav-item active" onclick="switchPage('home')">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                    工作台
+                </div>
+                <div id="nav-manager" class="nav-item" onclick="switchPage('manager')">
+                    <i data-lucide="library" class="w-4 h-4"></i>
+                    规范管理库
+                </div>
+                
+                <div class="px-6 text-[10px] text-gray-400 font-bold uppercase mt-8 mb-2 tracking-widest">SYSTEM</div>
+                <div class="nav-item"><i data-lucide="settings" class="w-4 h-4"></i> 设置</div>
+            </nav>
+            
+            <div class="p-4 text-center border-t border-gray-200 text-[10px] text-gray-400">v2.1.0 Fixed</div>
+        </aside>
+
+        <!-- 右侧主内容 -->
+        <main class="main-wrapper">
+            
+            <!-- =========== 页面 1: 工作台 =========== -->
+            <div id="view-home" class="page-view active">
+                <div class="max-w-5xl mx-auto w-full h-full flex flex-col justify-center pb-20">
+                    <div class="text-center mb-12">
+                        <h1 class="text-3xl font-bold text-gray-900 mb-3">开始新的格式化任务</h1>
+                        <p class="text-gray-500">AI 智能识别文档结构，一键应用标准公文格式</p>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 h-[360px]">
+                        <!-- Step 1 -->
+                        <div class="col-span-1 bg-white rounded-2xl p-8 border border-gray-200 shadow-sm flex flex-col relative overflow-hidden">
+                            <div class="absolute top-0 right-0 bg-blue-50 px-3 py-1 rounded-bl-xl text-blue-600 text-xs font-bold">STEP 1</div>
+                            <div class="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center text-blue-600 mb-6"><i data-lucide="mouse-pointer-click" class="w-6 h-6"></i></div>
+                            <h3 class="font-bold text-gray-900 text-lg mb-2">选择目标规范</h3>
+                            <p class="text-sm text-gray-500 mb-8 leading-relaxed">选择适用于本文档的格式标准。</p>
+                            <div class="mt-auto relative">
+                                <select class="w-full appearance-none bg-gray-50 border border-gray-200 text-gray-900 text-sm rounded-lg focus:ring-2 focus:ring-blue-100 focus:border-[#165DFF] block w-full p-3 pr-10 font-medium outline-none cursor-pointer">
+                                    <option>成都兴城集团规范 (默认)</option>
+                                    <option>技术部便函</option>
+                                </select>
+                                <i data-lucide="chevron-down" class="absolute right-3 top-3.5 w-4 h-4 text-gray-400 pointer-events-none"></i>
+                            </div>
+                        </div>
+                        <!-- Step 2 -->
+                        <div class="col-span-2 drop-zone cursor-pointer group">
+                            <div class="w-20 h-20 bg-white rounded-full shadow-lg flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform"><i data-lucide="upload-cloud" class="w-10 h-10"></i></div>
+                            <h3 class="text-xl font-bold text-gray-700 group-hover:text-[#165DFF]">点击或拖拽文件到此处</h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =========== 页面 2: 规范管理库 =========== -->
+            <div id="view-manager" class="page-view">
+                <div class="flex justify-between items-end mb-8">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-900">规范管理库</h2>
+                        <p class="text-gray-500 text-sm mt-1">配置您的公文格式标准。</p>
+                    </div>
+                    <button class="flex items-center gap-2 px-5 py-2.5 bg-[#165DFF] hover:bg-blue-700 text-white rounded-lg shadow-lg shadow-blue-500/20 active:scale-95 text-sm font-medium transition-all">
+                        <i data-lucide="plus" class="w-4 h-4"></i> 新建规范
+                    </button>
+                </div>
+
+                <!-- 内部 Tab -->
+                <div class="flex items-center gap-1 mb-6 border-b border-gray-200">
+                    <div class="sub-tab-btn active" onclick="switchSubTab(this)">全部 (3)</div>
+                    <div class="sub-tab-btn" onclick="switchSubTab(this)">启用中 (2)</div>
+                    <div class="sub-tab-btn" onclick="switchSubTab(this)">草稿箱 (1)</div>
+                </div>
+
+                <!-- 卡片网格 -->
+                <div class="card-grid">
+                    <!-- Card 1 -->
+                    <div class="spec-card default group cursor-pointer">
+                        <div class="flex items-start justify-between mb-3">
+                            <div>
+                                <div class="flex items-center gap-2"><h3 class="text-base font-bold text-gray-900">成都兴城集团规范</h3><span class="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-bold">默认</span></div>
+                                <p class="text-xs text-gray-500 mt-1 line-clamp-1">集团正式发文标准。</p>
+                            </div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn" title="编辑"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                            <button class="action-btn danger" title="删除"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                        <div class="preview-box">
+                            <div class="preview-row"><span class="row-label">文档标题</span><span class="row-val text-red-600">方正小标宋</span><span class="row-param">22pt</span><i data-lucide="align-center" class="w-3.5 h-3.5 text-gray-400"></i></div>
+                            <div class="preview-row"><span class="row-label">一级标题</span><span class="row-val">黑体</span><span class="row-param">16pt</span><i data-lucide="list-ordered" class="w-3.5 h-3.5 text-[#165DFF]"></i></div>
+                            <div class="preview-row bg-blue-50/30"><span class="row-label">正文</span><span class="row-val">仿宋_GB2312</span><span class="row-param">16pt</span><i data-lucide="align-justify" class="w-3.5 h-3.5 text-gray-400"></i></div>
+                        </div>
+                        <div class="mt-auto pt-4 flex items-center justify-between text-[10px] text-gray-400"><div class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 10分钟前</div><div class="flex items-center gap-1"><i data-lucide="layers" class="w-3 h-3"></i> 8 组</div></div>
+                    </div>
+                    
+                    <!-- Card 2 -->
+                    <div class="spec-card group cursor-pointer hover:border-blue-300">
+                        <div class="flex items-start justify-between mb-3">
+                            <div><h3 class="text-base font-bold text-gray-900 group-hover:text-[#165DFF]">技术部便函</h3><p class="text-xs text-gray-500 mt-1">内部非正式通知。</p></div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                            <button class="action-btn danger"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                        <div class="preview-box opacity-90">
+                            <div class="preview-row"><span class="row-label">标题</span><span class="row-val">微软雅黑</span><span class="row-param">18pt</span><i data-lucide="align-left" class="w-3.5 h-3.5 text-gray-400"></i></div>
+                            <div class="preview-row bg-gray-50"><span class="row-label">正文</span><span class="row-val">Arial</span><span class="row-param">10.5pt</span><i data-lucide="align-left" class="w-3.5 h-3.5 text-gray-400"></i></div>
+                        </div>
+                        <div class="mt-auto pt-4 flex items-center justify-between text-[10px] text-gray-400"><div class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> 昨天</div><div class="flex items-center gap-1"><i data-lucide="layers" class="w-3 h-3"></i> 4 组</div></div>
+                    </div>
+
+                    <!-- Card 3 -->
+                    <div class="spec-card group cursor-pointer border-dashed bg-gray-50 hover:bg-white">
+                        <div class="flex items-start justify-between mb-3">
+                            <div><div class="flex items-center gap-2"><h3 class="text-base font-bold text-gray-500">党群简报</h3><span class="bg-gray-200 text-gray-500 text-[10px] px-2 py-0.5 rounded font-bold">草稿</span></div><p class="text-xs text-gray-400 mt-1">未发布</p></div>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn"><i data-lucide="pencil" class="w-3.5 h-3.5"></i></button>
+                            <button class="action-btn danger"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+                        </div>
+                        <div class="preview-box opacity-50 grayscale">
+                            <div class="preview-row"><span class="row-label">简报头</span><span class="row-val">方正大标宋</span><span class="row-param">36pt</span><i data-lucide="align-center" class="w-3.5 h-3.5"></i></div>
+                        </div>
+                        <div class="mt-auto pt-4 flex items-center justify-between text-[10px] text-gray-400"><div class="flex items-center gap-1"><i data-lucide="user" class="w-3 h-3"></i> 李明</div></div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // 初始化图标
+        lucide.createIcons();
+
+        // 页面切换逻辑
+        function switchPage(pageName) {
+            // 1. 处理导航高亮
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            const activeNav = document.getElementById('nav-' + pageName);
+            if(activeNav) activeNav.classList.add('active');
+
+            // 2. 处理页面显示
+            document.querySelectorAll('.page-view').forEach(el => {
+                el.classList.remove('active');
+            });
+            const targetPage = document.getElementById('view-' + pageName);
+            if(targetPage) {
+                targetPage.classList.add('active');
+            }
+        }
+
+        // 内部 Tab 切换逻辑 (视觉效果)
+        function switchSubTab(btn) {
+            document.querySelectorAll('.sub-tab-btn').forEach(el => el.classList.remove('active'));
+            btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>“

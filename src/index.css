@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 全局样式 */
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  background-color: #f7f8fa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Upload 拖拽区域优化 */
+.upload-drag-area .arco-upload-drag {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Modal 优化 */
+.scan-modal .arco-modal-header {
+  border-bottom: 1px solid #e5e7eb;
+  padding: 16px 24px;
+}
+
+.scan-modal .arco-modal-body {
+  padding: 24px;
+}
+
+.scan-modal .arco-modal-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 12px 24px;
+}
+
+/* Table 优化 */
+.scan-result-table .arco-table-th {
+  background-color: #f9fafb !important;
+  font-weight: 600;
+  color: #374151;
+}
+
+.scan-result-table .arco-table-tr-checked {
+  background-color: #eff6ff !important;
+}
+
+.scan-result-table .arco-table-stripe .arco-table-tr:nth-child(2n) {
+  background-color: #fafafa;
+}
+
+/* 自定义滚动条 */
+.arco-table-body::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.arco-table-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.arco-table-body::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+.arco-table-body::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Card 阴影优化 */
+.shadow-sm {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* 按钮状态优化 */
+.arco-btn-primary {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.arco-btn-primary:hover {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+}
+
+/* 文本选择优化 */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}

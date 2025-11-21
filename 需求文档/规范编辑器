@@ -1,0 +1,435 @@
+import React, { useState, useEffect } from 'react';
+
+// --- 修复：恢复使用本地安装的 Arco Design 包 ---
+import {
+    Layout,
+    Menu,
+    Form,
+    Input,
+    Select,
+    InputNumber,
+    Checkbox,
+    Radio,
+    Grid,
+    Typography,
+    Button,
+    Space,
+    Message,
+    Card // 引入 Card 组件
+} from '@arco-design/web-react';
+// 注：样式文件 arco.min.css 应该已在你的项目入口文件 (如 App.tsx 或 main.ts) 中全局导入
+// --- 修复结束 ---
+
+
+const { Sider, Content } = Layout;
+const FormItem = Form.Item;
+const { Row, Col } = Grid;
+const { Title, Text } = Typography;
+
+// --- 1. 数据定义 ---
+
+// 样式菜单项
+const STYLE_MENU_ITEMS = [
+    { key: 'title', label: '文档标题 (Title)' },
+    { key: 'recipient', label: '主送单位 (Heading 6)' },
+    { key: 'normal', label: '正文 (Normal)' },
+    { key: 'heading1', label: '一级标题 (Heading 1)' },
+    { key: 'heading2', label: '二级标题 (Heading 2)' },
+    { key: 'heading3', label: '三级标题 (Heading 3)' },
+    { key: 'heading4', label: '四级标题 (Heading 4)' },
+    { key: 'signature', label: '落款单位 (Heading 7)' },
+    { key: 'date', label: '落款日期 (Heading 8)' },
+    { key: 'attachment', label: '附件 (特殊)' },
+    { key: 'specialRules', label: '特殊规则 (全局)' },
+];
+
+// 字体选项
+// ... 现有代码 ...
+const FONT_OPTIONS = [
+    '方正小标宋简体',
+    '方正仿宋',
+    '方正黑体',
+    '方正楷体',
+    '宋体',
+    '黑体',
+    '楷体_GB2312',
+];
+
+// 根据 "成都兴城" 规范预设的数据
+// ... 现有代码 ...
+const DEFAULT_PROFILE_DATA = {
+    profileName: '成都兴城集团规范 (预设)',
+    // 样式映射
+    styles: {
+        title: { font: '方正小标宋简体', size: 22, line: 35, align: 'center', bold: false },
+        recipient: { font: '方正仿宋', size: 16, line: 28, align: 'left', bold: false, spaceBefore: 28 },
+        normal: { font: '方正仿宋', size: 16, line: 28, align: 'left', bold: false, indent: true },
+        heading1: { font: '方正黑体', size: 16, line: 28, align: 'left', bold: true },
+        heading2: { font: '方正楷体', size: 16, line: 28, align: 'left', bold: true },
+        heading3: { font: '方正仿宋', size: 16, line: 28, align: 'left', bold: true },
+        heading4: { font: '方正仿宋', size: 16, line: 28, align: 'left', bold: true },
+        signature: { font: '方正仿宋', size: 16, line: 28, align: 'right', bold: false },
+        date: { font: '方正仿宋', size: 16, line: 28, align: 'right', bold: false },
+        attachment: {
+            prefixFont: '方正黑体',
+            prefixSize: 16,
+            titleFont: '方正小标宋简体',
+            titleSize: 22
+        },
+    },
+    // 特殊规则
+    rules: {
+        enFont: 'Times New Roman',
+        applyEnFont: true,
+        pageNumber: {
+            enable: true,
+            format: '- {n} -',
+            align: 'center',
+            homePageSkip: true,
+        },
+    },
+};
+
+// --- 2. 核心组件 ---
+
+/**
+ * 规范编辑器主组件
+ * @param {object} props
+ * @param {object} [props.initialData=DEFAULT_PROFILE_DATA] - 初始加载的规范数据 (新建时传null或DEFAULT, 编辑时传入)
+ * @param {boolean} [props.isPreset=true] - 是否为预设规范 (预设规范不可编辑/保存)
+ * @param {function} props.onSave - (profileData) => {} 保存按钮的回调
+ * @param {function} props.onCancel - 取消按钮的回调
+ */
+const ProfileEditor = ({
+    initialData = DEFAULT_PROFILE_DATA,
+    isPreset = true,
+    onSave,
+    onCancel
+}) => {
+
+// ... 现有代码 ...
+    const [selectedKey, setSelectedKey] = useState('title');
+
+    // 完整的规范数据状态
+    const [profileData, setProfileData] = useState(initialData);
+
+    // Arco Form 实例
+    const [form] = Form.useForm();
+
+    // 切换菜单时，用 profileData 中对应的数据去填充表单
+// ... 现有代码 ...
+    useEffect(() => {
+        if (selectedKey === 'specialRules') {
+            form.setFieldsValue(profileData.rules);
+        } else if (selectedKey === 'attachment') {
+            form.setFieldsValue(profileData.styles.attachment);
+        }
+        else {
+            form.setFieldsValue(profileData.styles[selectedKey]);
+        }
+    }, [selectedKey, profileData, form]);
+
+    /**
+     * 当表单任一项发生变化时，实时更新 profileData 状态
+     */
+    // --- 修复：修正 handleFormChange 的内部逻辑 ---
+    const handleFormChange = (changedValues, allValues) => {
+        // setProfileData 是异步的，我们基于 prevData 更新
+        setProfileData(prevData => {
+            if (selectedKey === 'specialRules') {
+                // 返回新的 state object
+                return {
+                    ...prevData,
+                    rules: {
+                        ...prevData.rules,
+                        ...allValues
+                    }
+                };
+            }
+            if (selectedKey === 'attachment') {
+                return {
+                    ...prevData,
+                    styles: {
+                        ...prevData.styles,
+                        attachment: allValues
+                    }
+                };
+            }
+            // 否则，更新的是通用样式
+            return {
+                ...prevData,
+                styles: {
+                    ...prevData.styles,
+                    [selectedKey]: allValues
+                }
+            };
+        });
+    };
+    // --- 修复结束 ---
+
+    /**
+     * 点击保存按钮
+     */
+    // --- 修复：移除重复的 handleSave 定义 ---
+    const handleSave = async () => {
+        try {
+            await form.validate(); // 触发表单验证
+            Message.success('保存成功！');
+            if (onSave) {
+                onSave(profileData); // 将最新的数据回调给父组件
+            }
+        } catch (error) {
+            Message.error('表单填写有误，请检查！');
+            console.error('Form validation failed:', error);
+        }
+    };
+    // --- 修复结束 ---
+
+    /**
+     * 渲染右侧的动态表单
+     */
+    const renderFormContent = () => {
+        // 1. 特殊规则的表单
+        if (selectedKey === 'specialRules') {
+            return (
+                <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                    {/* --- 修复：使用 Card 组件替代 div 和 Tailwind --- */}
+                    <Card
+                        title={<Text strong>自动将数字/英文设为 (US3.1)</Text>}
+                        bordered={true}
+                        headerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+                        bodyStyle={{ paddingTop: 8 }}
+                    >
+                        <FormItem field="applyEnFont" triggerPropName="checked">
+                            <Checkbox disabled={isPreset}>启用此规则</Checkbox>
+                        </FormItem>
+                        <FormItem label="指定字体" field="enFont">
+                            <Select disabled={isPreset || !profileData.rules.applyEnFont} placeholder="选择字体">
+                                <Select.Option value="Times New Roman">Times New Roman</Select.Option>
+                                <Select.Option value="Arial">Arial</Select.Option>
+                                <Select.Option value="Calibri">Calibri</Select.Option>
+                            </Select>
+                        </FormItem>
+                    </Card>
+
+                    <Card
+                        title={<Text strong>自动设置页码 (US3.2)</Text>}
+                        bordered={true}
+                        headerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+                        bodyStyle={{ paddingTop: 8 }}
+                    >
+                        <FormItem field="pageNumber.enable" triggerPropName="checked">
+                            <Checkbox disabled={isPreset}>启用此规则</Checkbox>
+                        </FormItem>
+                        <Row gutter={24}>
+                            <Col span={12}>
+                                <FormItem label="页码格式" field="pageNumber.format">
+                                    <Input disabled={isPreset || !profileData.rules.pageNumber.enable} placeholder="- {n} -" />
+                                </FormItem>
+                            </Col>
+                            <Col span={12}>
+                                <FormItem label="对齐方式" field="pageNumber.align">
+                                    <Radio.Group type="button" disabled={isPreset || !profileData.rules.pageNumber.enable}>
+                                        <Radio value="left">居左</Radio>
+                                        <Radio value="center">居中</Radio>
+                                        <Radio value="right">居右</Radio>
+                                    </Radio.Group>
+                                </FormItem>
+                            </Col>
+                            <Col span={12}>
+                                <FormItem field="pageNumber.homePageSkip" triggerPropName="checked" noStyle>
+                                     <Checkbox disabled={isPreset || !profileData.rules.pageNumber.enable}>
+                                        首页不显示页码
+                                    </Checkbox>
+                                </FormItem>
+                            </Col>
+                        </Row>
+                    </Card>
+                    {/* --- 修复结束 --- */}
+                </Space>
+            );
+        }
+
+        // 2. 附件的表单
+        if (selectedKey === 'attachment') {
+            return (
+                 <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                    {/* --- 修复：使用 Card 组件 --- */}
+                    <Card
+                        title={<Text strong>"附件X" (如 附件1)</Text>}
+                        bordered={true}
+                        headerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+                        bodyStyle={{ paddingTop: 8 }}
+                    >
+                        <Row gutter={24}>
+                            <Col span={12}>
+                                <FormItem label="字体" field="prefixFont">
+                                    <Select disabled={isPreset} placeholder="选择字体">
+                                        {FONT_OPTIONS.map(f => <Select.Option key={f} value={f}>{f}</Select.Option>)}
+                                    </Select>
+                                </FormItem>
+                            </Col>
+                            <Col span={12}>
+                                 <FormItem label="字号 (磅)" field="prefixSize">
+                                    <InputNumber disabled={isPreset} min={9} max={72} />
+                                </FormItem>
+                            </Col>
+                        </Row>
+                    </Card>
+                    <Card
+                        title={<Text strong>附件标题 (如 XXXX)</Text>}
+                        bordered={true}
+                        headerStyle={{ paddingTop: 16, paddingBottom: 8 }}
+                        bodyStyle={{ paddingTop: 8 }}
+                    >
+                        <Row gutter={24}>
+                            <Col span={12}>
+                                <FormItem label="字体" field="titleFont">
+                                    <Select disabled={isPreset} placeholder="选择字体">
+                                        {FONT_OPTIONS.map(f => <Select.Option key={f} value={f}>{f}</Select.Option>)}
+                                    </Select>
+                                </FormItem>
+                            </Col>
+                            <Col span={12}>
+                                 <FormItem label="字号 (磅)" field="titleSize">
+                                    <InputNumber disabled={isPreset} min={9} max={72} />
+                                </FormItem>
+                            </Col>
+                        </Row>
+                    </Card>
+                    {/* --- 修复结束 --- */}
+                </Space>
+            );
+        }
+
+        // 3. 通用样式表单 (标题、正文等)
+// ... 现有代码 ...
+        const currentStyle = profileData.styles[selectedKey] || {};
+        return (
+            <Row gutter={24}>
+                <Col span={12}>
+                    <FormItem label="字体" field="font">
+                        <Select disabled={isPreset} placeholder="选择字体">
+                            {FONT_OPTIONS.map(f => <Select.Option key={f} value={f}>{f}</Select.Option>)}
+                        </Select>
+                    </FormItem>
+                </Col>
+                <Col span={8}>
+                    <FormItem label="字号 (磅)" field="size">
+                        <InputNumber disabled={isPreset} min={9} max={72} />
+                    </FormItem>
+                </Col>
+                <Col span={8}>
+                    <FormItem label="行距 (磅)" field="line">
+                        <InputNumber disabled={isPreset} min={10} max={72} />
+                    </FormItem>
+                </Col>
+                <Col span={12}>
+                    <FormItem label="对齐方式" field="align">
+                        <Radio.Group type="button" disabled={isPreset}>
+                            <Radio value="left">居左</Radio>
+                            <Radio value="center">居中</Radio>
+                            <Radio value="right">居右</Radio>
+                        </Radio.Group>
+                    </FormItem>
+                </Col>
+                <Col span={12}>
+                    <FormItem label="样式" field="bold" triggerPropName="checked" noStyle>
+                        <Checkbox disabled={isPreset}>加粗</Checkbox>
+                    </FormItem>
+                    {/* 仅在 "正文" 时显示 "首行缩进" */}
+                    {selectedKey === 'normal' && (
+                        <FormItem label=" " field="indent" triggerPropName="checked" noStyle>
+                            <Checkbox disabled={isPreset}>首行缩进 (2字符)</Checkbox>
+                        </FormItem>
+                    )}
+                </Col>
+                 {/* 仅在 "主送单位" 时显示 "段前距" */}
+                {/* --- 修复：将占位符替换为实际代码 --- */}
+                {selectedKey === 'recipient' && (
+                    <Col span={12}>
+                        <FormItem label="段前距 (磅)" field="spaceBefore" help="用于实现与标题空一行">
+                            <InputNumber disabled={isPreset} min={0} max={72} />
+                        </FormItem>
+                    </Col>
+                )}
+                {/* --- 修复结束 --- */}
+            </Row>
+        );
+    };
+
+// ... 现有代码 ...
+
+    return (
+        <Layout style={{ height: 'calc(100vh - 120px)' /* 减去外层padding和底部按钮高度 */ }}>
+            {/* 左侧 Sider 菜单 */}
+            <Sider
+                width={260}
+                style={{ backgroundColor: 'var(--color-bg-1)', borderRight: '1px solid var(--color-border)' }}
+            >
+                <Menu
+                    selectedKeys={[selectedKey]}
+                    onClickMenuItem={(key) => setSelectedKey(key)}
+                    style={{ width: '100%' }}
+                >
+                    {STYLE_MENU_ITEMS.map(item => (
+                        <Menu.Item key={item.key}>{item.label}</Menu.Item>
+                    ))}
+                </Menu>
+            </Sider>
+
+            {/* 右侧 Content 表单 */}
+// ... 现有代码 ...
+            <Content style={{ padding: '24px', backgroundColor: 'var(--color-bg-2)' }}>
+                <Title heading={5} style={{ marginTop: 0 }}>
+                    {STYLE_MENU_ITEMS.find(item => item.key === selectedKey)?.label || '配置'}
+                </Title>
+                <Text type="secondary">
+                    {isPreset ? '预设规范不可修改。' : '你可以在此修改自定义规范的参数。'}
+                </Text>
+
+                <Form
+                    form={form}
+                    layout="vertical"
+                    onValuesChange={handleFormChange}
+                    style={{ marginTop: '20px' }}
+                    disabled={isPreset} // 如果是预设，禁用整个表单
+                >
+                    {renderFormContent()}
+                </Form>
+            </Content>
+
+            {/* 页面底部的操作栏 */}
+            {/* 这个div的样式需要你根据你外层的Layout来调整
+                这里只是一个示例，放在右下角
+            */}
+             <div
+                style={{
+                    position: 'absolute',
+                    bottom: 20, // 假设
+                    right: 20,
+                    padding: '12px 24px',
+                    backgroundColor: 'var(--color-bg-1)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                }}
+            >
+                <Space size="medium">
+                    <Button onClick={onCancel}>
+                        {isPreset ? '返回列表' : '取消'}
+                    </Button>
+                    {/* --- 修复：将占位符替换为实际代码 --- */}
+                    {!isPreset && (
+                        <Button type="primary" onClick={handleSave}>
+                            保存规范
+                        </Button>
+                    )}
+                    {/* --- 修复结束 --- */}
+                </Space>
+            </div>
+        </Layout>
+    );
+};
+
+export default ProfileEditor;

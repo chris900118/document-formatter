@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>样式规范配置 - 修复版</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    
+    <style>
+        /* 全局重置 */
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* --- 1. 强力修复：侧边抽屉 (Drawer) --- */
+        .drawer-mask {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px);
+            z-index: 998; /* 极高的层级 */
+            opacity: 0; visibility: hidden; transition: all 0.3s;
+        }
+        .drawer-mask.open { opacity: 1; visibility: visible; }
+
+        .drawer-panel {
+            position: fixed; top: 0; right: 0; bottom: 0; /* 强制占满右侧垂直空间 */
+            width: 420px; background: #fff;
+            z-index: 999; /* 最高层级 */
+            box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+            transform: translateX(100%); /* 默认移出屏幕 */
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex; flex-direction: column;
+        }
+        .drawer-panel.open { transform: translateX(0); }
+
+        /* --- 2. 强力修复：图标尺寸 --- */
+        .icon-svg { width: 1em; height: 1em; vertical-align: middle; display: inline-block; stroke-width: 4; }
+
+        /* --- 3. 胶囊视图 (View Mode) --- */
+        .capsule {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 10px; border-radius: 99px; border: 1px solid #E5E7EB;
+            background: #F9FAFB; color: #4B5563; font-size: 12px; font-weight: 500;
+            user-select: none; white-space: nowrap;
+        }
+        .capsule.blue { background: #EFF6FF; color: #1D4ED8; border-color: #BFDBFE; }
+
+        /* --- 4. 编辑态控件 (Edit Mode) - 强制固定宽度防止挤压 --- */
+        .edit-container {
+            display: flex; align-items: center; gap: 12px; 
+            white-space: nowrap; /* 核心：禁止换行 */
+        }
+
+        /* 通用输入框重置 */
+        .input-fix {
+            height: 32px; background: #fff; border: 1px solid #D1D5DB; border-radius: 4px;
+            font-size: 13px; color: #374151; outline: none; padding: 0 8px;
+            transition: border 0.2s;
+        }
+        .input-fix:focus { border-color: #2563EB; box-shadow: 0 0 0 2px rgba(37,99,235,0.1); }
+
+        /* 具体的固定宽度控件 */
+        .w-font-select { width: 140px; } /* 字体选择框宽度 */
+        .w-size-input  { width: 70px; text-align: center; padding-right: 20px; } /* 字号宽度 */
+        .w-line-input  { width: 70px; text-align: center; padding-right: 20px; } /* 行距宽度 */
+        .w-align-group { width: 128px; display: flex; background: #F3F4F6; padding: 2px; border-radius: 4px; border: 1px solid #E5E7EB; }
+        
+        /* 分段控制器按钮 */
+        .seg-btn { flex: 1; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 3px; color: #9CA3AF; cursor: pointer; border: none; background: transparent; }
+        .seg-btn:hover { color: #6B7280; }
+        .seg-btn.active { background: #fff; color: #2563EB; shadow: 0 1px 2px rgba(0,0,0,0.05); font-weight: bold; }
+        
+        /* 单位后缀定位 */
+        .suffix-wrap { position: relative; display: flex; align-items: center; }
+        .suffix-text { position: absolute; right: 8px; font-size: 12px; color: #9CA3AF; pointer-events: none; line-height: 32px; }
+
+        /* 工具按钮 */
+        .tool-icon-btn {
+            width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;
+            border: 1px solid transparent; border-radius: 4px; cursor: pointer; color: #6B7280;
+        }
+        .tool-icon-btn.active { background: #EFF6FF; color: #2563EB; border-color: #BFDBFE; }
+        .tool-icon-btn:hover:not(.active) { background: #F3F4F6; }
+
+        /* 编号按钮 */
+        .num-config-btn {
+            height: 32px; padding: 0 12px; display: flex; align-items: center; gap: 6px;
+            border-radius: 4px; font-size: 12px; cursor: pointer; border: 1px solid; transition: all 0.2s;
+        }
+        .num-config-btn.on { background: #fff; border-color: #93C5FD; color: #2563EB; }
+        .num-config-btn.on:hover { background: #EFF6FF; }
+        .num-config-btn.off { background: #F9FAFB; border-color: #E5E7EB; color: #9CA3AF; border-style: dashed; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= 1. 侧边抽屉 (绝对定位) ================= -->
+    <div id="drawer-mask" class="drawer-mask" onclick="closeDrawer()"></div>
+    <div id="drawer-panel" class="drawer-panel">
+        <!-- 抽屉头 -->
+        <div class="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+            <div>
+                <h3 class="text-lg font-bold text-gray-900" id="drawer-title">配置自动编号</h3>
+                <p class="text-xs text-gray-500 mt-1">设置 <span id="drawer-layer-name" class="font-bold">一级标题</span> 的编号规则</p>
+            </div>
+            <button onclick="closeDrawer()" class="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <!-- 抽屉内容 -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-6">
+            <!-- 开关卡片 -->
+            <div class="flex items-center justify-between bg-white p-4 rounded-lg border border-gray-200 shadow-sm" id="drawer-card">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg flex items-center justify-center transition-colors" id="drawer-icon-bg">
+                        <i data-lucide="list-ordered" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-bold text-gray-900" id="drawer-status-text">启用自动编号</span>
+                    </div>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="drawer-switch" class="sr-only peer" onchange="toggleDrawerState()">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+            </div>
+
+            <!-- 模拟配置项 -->
+            <div id="drawer-options" class="space-y-4 transition-opacity duration-200">
+                <div>
+                    <label class="text-xs font-bold text-gray-500 mb-2 block">编号样式</label>
+                    <select id="drawer-select" class="input-fix w-full" onchange="updateDrawerPreview()">
+                        <option value="1, 2, 3">1, 2, 3 (阿拉伯数字)</option>
+                        <option value="一, 二, 三">一, 二, 三 (中文小写)</option>
+                        <option value="第1章">第1章 (章格式)</option>
+                    </select>
+                </div>
+                <!-- 预览大字 -->
+                <div class="bg-slate-900 text-white rounded-xl p-8 text-center mt-4">
+                    <div class="text-3xl font-bold font-mono" id="drawer-preview">1.1</div>
+                    <div class="text-xs text-slate-500 mt-2">预览效果</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 抽屉底栏 -->
+        <div class="p-5 border-t border-gray-100 flex gap-3">
+            <button onclick="closeDrawer()" class="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm text-gray-600 hover:bg-gray-50">取消</button>
+            <button onclick="saveDrawer()" class="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 shadow-md">确认应用</button>
+        </div>
+    </div>
+
+
+    <!-- ================= 2. 主界面 ================= -->
+    <div class="w-full px-10 py-8">
+        <!-- 面包屑与头部 -->
+        <div class="flex justify-between items-center mb-6">
+            <div class="flex items-center gap-2 text-sm text-gray-500">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i> 返回列表 <span class="mx-1">/</span> <span class="text-gray-900 font-bold">成都兴城集团规范</span>
+            </div>
+            <div class="flex gap-3">
+                <button class="px-4 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50">重置</button>
+                <button class="px-4 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 shadow-sm">保存修改</button>
+            </div>
+        </div>
+
+        <!-- 核心表格容器 -->
+        <div class="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden min-h-[500px]">
+            <!-- 表格头 -->
+            <div class="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                <h3 class="font-bold text-gray-800">样式配置矩阵</h3>
+                <span class="text-xs text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-100 flex items-center gap-1">
+                    <i data-lucide="info" class="w-3 h-3"></i> 点击行即可编辑
+                </span>
+            </div>
+
+            <!-- 真正的表格 -->
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-200 text-xs text-gray-500 uppercase">
+                        <th class="px-6 py-4 w-32 font-medium">层级名称</th>
+                        <th class="px-6 py-4 font-medium">样式配置 (字体 / 字号 / 行距 / 对齐 / 编号)</th>
+                        <th class="px-6 py-4 w-20 text-right font-medium">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body" class="divide-y divide-gray-100 text-sm">
+                    <!-- 内容由 JS 渲染 -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // ================= 数据定义 =================
+        const data = [
+            { id: 'h1', name: '文档标题', font: '方正小标宋简体', size: 22, bold: false, line: 35, align: 'center', num: { on: false, val: '' }, editing: false },
+            { id: 'h2', name: '一级标题', font: '黑体', size: 16, bold: true, line: 28, align: 'center', num: { on: true, val: '第1章' }, editing: true }, // 默认开启编辑
+            { id: 'h3', name: '二级标题', font: '楷体_GB2312', size: 16, bold: true, line: 28, align: 'left', num: { on: true, val: '1.1' }, editing: false },
+            { id: 'h4', name: '三级标题', font: '仿宋', size: 16, bold: false, line: 28, align: 'left', num: { on: true, val: '1.1.1' }, editing: false }
+        ];
+
+        // SVG 图标 (简化版)
+        const ICONS = {
+            font: `<svg class="icon-svg"><path d="M9 41h30M16.467 22 11.5 34m20.032-12L24.998 7h-2l-6.532 15h15.065Zm0 0H16.467h15.065Zm0 0L36.5 34l-4.968-12Z" fill="none" stroke="currentColor"></path></svg>`,
+            size: `<svg class="icon-svg"><path d="M12 7H6v4h2v28h4V11h2V7Zm-2 15h22M23 7h-6v4h2v28h4V11h2V7Zm13 22h-4v4h8v-4h-4Zm2-22h-8v4h3v14h-3v4h8v-4h-3V11h3V7Z" fill="none" stroke="currentColor"></path></svg>`,
+            line: `<svg class="icon-svg"><path d="M4 8h14.5M33 8H18.5m0 0v34m6-32.5l-2 3.5h4l-2-3.5zm0 29l-2 3.5h4l-2-3.5z" fill="none" stroke="currentColor"></path></svg>`,
+            align: `<svg class="icon-svg"><path d="M44 9H4m36 20H4m21-10H4m21 20H4" fill="none" stroke="currentColor"></path></svg>`
+        };
+
+        const alignMap = { left: '左对齐', center: '居中', right: '右对齐', justify: '两端' };
+
+        // ================= 渲染逻辑 =================
+        function render() {
+            const tbody = document.getElementById('table-body');
+            tbody.innerHTML = data.map(item => item.editing ? renderEdit(item) : renderView(item)).join('');
+            lucide.createIcons(); // 刷新图标
+        }
+
+        // 1. 阅读态 (View Mode) - 胶囊展示
+        function renderView(item) {
+            return `
+            <tr class="hover:bg-gray-50 transition-colors cursor-pointer group" onclick="toggleEdit('${item.id}')">
+                <td class="px-6 py-5 font-medium text-gray-900">${item.name}</td>
+                <td class="px-6 py-5">
+                    <div class="flex flex-wrap items-center gap-3">
+                        <div class="capsule"><span class="opacity-60">${ICONS.font}</span>${item.font} ${item.bold ? '<b class="ml-1">B</b>':''}</div>
+                        <div class="capsule"><span class="opacity-60">${ICONS.size}</span>${item.size}pt</div>
+                        <div class="capsule"><span class="opacity-60">${ICONS.line}</span>${item.line}磅</div>
+                        <div class="capsule"><span class="opacity-60">${ICONS.align}</span>${alignMap[item.align]}</div>
+                        ${item.num.on ? `<div class="capsule blue"><i data-lucide="check-circle-2" class="w-3 h-3"></i>${item.num.val}</div>` : ''}
+                    </div>
+                </td>
+                <td class="px-6 py-5 text-right">
+                    <button class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+                </td>
+            </tr>`;
+        }
+
+        // 2. 编辑态 (Edit Mode) - 单行！不换行！固定宽度！
+        function renderEdit(item) {
+            return `
+            <tr class="bg-blue-50/40 ring-1 ring-blue-100 relative z-10 shadow-[inset_0_2px_6px_rgba(0,0,0,0.02)]">
+                <td class="px-6 py-5 font-bold text-blue-800 align-middle">${item.name}</td>
+                <td class="px-6 py-5 align-middle">
+                    <div class="edit-container">
+                        
+                        <!-- 1. 字体 + 加粗 -->
+                        <div class="flex gap-2 items-center">
+                            <select class="input-fix w-font-select">
+                                <option ${item.font.includes('小标宋')?'selected':''}>方正小标宋简体</option>
+                                <option ${item.font.includes('黑体')?'selected':''}>黑体</option>
+                                <option ${item.font.includes('楷体')?'selected':''}>楷体_GB2312</option>
+                                <option ${item.font.includes('仿宋')?'selected':''}>仿宋</option>
+                            </select>
+                            <button class="tool-icon-btn ${item.bold ? 'active' : 'bg-white border-gray-300'}" title="加粗">
+                                <i data-lucide="bold" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+
+                        <div class="w-px h-6 bg-gray-300 mx-2"></div>
+
+                        <!-- 2. 字号 -->
+                        <div class="suffix-wrap">
+                            <input type="number" class="input-fix w-size-input" value="${item.size}">
+                            <span class="suffix-text">pt</span>
+                        </div>
+
+                        <!-- 3. 行距 -->
+                        <div class="suffix-wrap">
+                            <input type="number" class="input-fix w-line-input" value="${item.line}">
+                            <span class="suffix-text">磅</span>
+                        </div>
+
+                        <div class="w-px h-6 bg-gray-300 mx-2"></div>
+
+                        <!-- 4. 对齐 -->
+                        <div class="w-align-group">
+                            <button class="seg-btn ${item.align==='left'?'active':''}"><i data-lucide="align-left" class="w-3.5 h-3.5"></i></button>
+                            <button class="seg-btn ${item.align==='center'?'active':''}"><i data-lucide="align-center" class="w-3.5 h-3.5"></i></button>
+                            <button class="seg-btn ${item.align==='right'?'active':''}"><i data-lucide="align-right" class="w-3.5 h-3.5"></i></button>
+                            <button class="seg-btn ${item.align==='justify'?'active':''}"><i data-lucide="align-justify" class="w-3.5 h-3.5"></i></button>
+                        </div>
+
+                        <div class="w-px h-6 bg-gray-300 mx-2"></div>
+
+                        <!-- 5. 编号 -->
+                        <button onclick="openDrawer('${item.id}'); event.stopPropagation()" 
+                            class="num-config-btn ${item.num.on ? 'on' : 'off'}">
+                            <i data-lucide="${item.num.on ? 'check-circle-2' : 'circle-dashed'}" class="w-3.5 h-3.5"></i>
+                            <span>${item.num.on ? item.num.val : '无编号'}</span>
+                            <i data-lucide="settings-2" class="w-3 h-3 ml-1 opacity-50"></i>
+                        </button>
+                    </div>
+                </td>
+                <td class="px-6 py-5 text-right align-middle">
+                    <button onclick="saveRow('${item.id}'); event.stopPropagation()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded font-medium shadow-sm">完成</button>
+                </td>
+            </tr>`;
+        }
+
+        // ================= 交互逻辑 =================
+        
+        // 切换行编辑
+        function toggleEdit(id) {
+            data.forEach(d => d.editing = false);
+            const target = data.find(d => d.id === id);
+            if (target) target.editing = true;
+            render();
+        }
+        function saveRow(id) {
+            const target = data.find(d => d.id === id);
+            if (target) target.editing = false;
+            render();
+        }
+
+        // 抽屉逻辑
+        let currentId = null;
+
+        function openDrawer(id) {
+            currentId = id;
+            const item = data.find(d => d.id === id);
+            document.getElementById('drawer-layer-name').innerText = item.name;
+            document.getElementById('drawer-switch').checked = item.num.on;
+            toggleDrawerState(); // 初始化状态颜色
+            
+            // 打开
+            document.getElementById('drawer-mask').classList.add('open');
+            document.getElementById('drawer-panel').classList.add('open');
+        }
+
+        function closeDrawer() {
+            document.getElementById('drawer-mask').classList.remove('open');
+            document.getElementById('drawer-panel').classList.remove('open');
+        }
+
+        function toggleDrawerState() {
+            const on = document.getElementById('drawer-switch').checked;
+            const card = document.getElementById('drawer-card');
+            const bg = document.getElementById('drawer-icon-bg');
+            const text = document.getElementById('drawer-status-text');
+            const opts = document.getElementById('drawer-options');
+
+            if(on) {
+                card.style.borderColor = '#BFDBFE'; card.style.backgroundColor = '#EFF6FF';
+                bg.className = 'w-10 h-10 rounded-lg flex items-center justify-center bg-blue-100 text-blue-600';
+                text.innerText = '启用自动编号'; text.style.color = '#1E3A8A';
+                opts.style.opacity = '1'; opts.style.pointerEvents = 'auto';
+            } else {
+                card.style.borderColor = '#E5E7EB'; card.style.backgroundColor = '#fff';
+                bg.className = 'w-10 h-10 rounded-lg flex items-center justify-center bg-gray-100 text-gray-400';
+                text.innerText = '未启用'; text.style.color = '#374151';
+                opts.style.opacity = '0.3'; opts.style.pointerEvents = 'none';
+            }
+        }
+
+        function updateDrawerPreview() {
+            const val = document.getElementById('drawer-select').value;
+            // 简单模拟预览文字
+            let show = '1.1';
+            if(val.includes('一')) show = '一.1';
+            if(val.includes('章')) show = '第1章';
+            document.getElementById('drawer-preview').innerText = show;
+        }
+
+        function saveDrawer() {
+            if(!currentId) return;
+            const item = data.find(d => d.id === currentId);
+            const on = document.getElementById('drawer-switch').checked;
+            const val = document.getElementById('drawer-select').value;
+            
+            item.num.on = on;
+            if(on) {
+                if(val.includes('章')) item.num.val = '第1章';
+                else if(val.includes('一')) item.num.val = '一.1';
+                else item.num.val = '1.1';
+            }
+            closeDrawer();
+            render();
+        }
+
+        // 初始化
+        render();
+    </script>
+</body>
+</html>

@@ -1,0 +1,207 @@
+import React, { useEffect } from 'react';
+import {
+    Layout,
+    Form,
+    Input,
+    Select,
+    InputNumber,
+    Checkbox,
+    Radio,
+    Grid,
+    Typography,
+    Button,
+    Space,
+    Message,
+    Card, // 使用 Card 分组
+    Divider // 使用 Divider 分隔
+} from '@arco-design/web-react';
+
+const { Title, Text } = Typography;
+const { Row, Col } = Grid;
+const FormItem = Form.Item;
+
+// --- 数据定义 (从原 ProfileEditor 复制) ---
+const FONT_OPTIONS = [
+    '方正小标宋简体', '方正仿宋', '方正黑体', '方正楷体',
+    '宋体', '黑体', '楷体_GB2312', 'Times New Roman'
+];
+
+const DEFAULT_PROFILE_DATA = { /* ... 保持你 App.tsx 中的定义 ... */ };
+
+/**
+ * 新的滚动式长表单编辑器
+ * @param {object} props
+ * @param {object} [props.initialData] - 初始加载的规范数据
+ * @param {boolean} [props.isViewMode=false] - 是否为查看模式 (只读)
+ * @param {function} props.onSave - (profileData) => {} 保存按钮的回调
+ * @param {function} props.onCancel - 取消按钮的回调
+ */
+const ProfileEditorForm = ({
+    initialData = DEFAULT_PROFILE_DATA,
+    isViewMode = false, // 使用 isViewMode 替代 isPreset
+    onSave,
+    onCancel
+}) => {
+    const [form] = Form.useForm();
+
+    // 当 initialData 变化时，重置表单
+    useEffect(() => {
+        form.setFieldsValue(initialData);
+    }, [initialData, form]);
+
+    const handleSave = async () => {
+        try {
+            const values = await form.validate();
+            Message.success('保存成功！');
+            if (onSave) {
+                onSave(values); // 将表单所有值回调
+            }
+        } catch (error) {
+            Message.error('表单填写有误，请检查！');
+        }
+    };
+
+    // 辅助函数：渲染通用的样式表单项
+    const renderStyleFields = (fieldPrefix) => (
+        <Row gutter={24}>
+            <Col span={8}>
+                <FormItem label="字体" field={`${fieldPrefix}.font`}>
+                    <Select disabled={isViewMode} placeholder="选择字体">
+                        {FONT_OPTIONS.map(f => <Select.Option key={f} value={f}>{f}</Select.Option>)}
+                    </Select>
+                </FormItem>
+            </Col>
+            <Col span={4}>
+                <FormItem label="字号 (磅)" field={`${fieldPrefix}.size`}>
+                    <InputNumber disabled={isViewMode} min={9} max={72} />
+                </FormItem>
+            </Col>
+            <Col span={4}>
+                <FormItem label="行距 (磅)" field={`${fieldPrefix}.line`}>
+                    <InputNumber disabled={isViewMode} min={10} max={72} />
+                </FormItem>
+            </Col>
+            <Col span={8}>
+                <FormItem label="对齐方式" field={`${fieldPrefix}.align`}>
+                    <Radio.Group type="button" disabled={isViewMode}>
+                        <Radio value="left">居左</Radio>
+                        <Radio value="center">居中</Radio>
+                        <Radio value="right">居右</Radio>
+                    </Radio.Group>
+                </FormItem>
+            </Col>
+            <Col span={12}>
+                <FormItem label=" " field={`${fieldPrefix}.bold`} triggerPropName="checked" noStyle>
+                    <Checkbox disabled={isViewMode}>加粗</Checkbox>
+                </FormItem>
+                {/* 仅在 "正文" 时显示 "首行缩进" */}
+                {fieldPrefix === 'styles.normal' && (
+                    <FormItem label=" " field="styles.normal.indent" triggerPropName="checked" noStyle>
+                        <Checkbox disabled={isViewMode}>首行缩进 (2字符)</Checkbox>
+                    </FormItem>
+                )}
+            </Col>
+        </Row>
+    );
+
+    return (
+        <Layout>
+            {/* 顶部标题栏 (模拟你 image_36e342.png 的样式) */}
+            <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                paddingBottom: 20, marginBottom: 20,
+                borderBottom: '1px solid var(--color-border-2)'
+            }}>
+                <Title heading={4} style={{ margin: 0 }}>
+                    {isViewMode ? '查看规范' : (initialData.profileName === '未命名规范' ? '新建规范' : '编辑规范')}
+                </Title>
+                <Space>
+                    <Button onClick={onCancel}>取消</Button>
+                    {!isViewMode && (
+                        <Button type="primary" onClick={handleSave}>保存</Button>
+                    )}
+                </Space>
+            </div>
+
+            {/* 可滚动的长表单 */}
+            <Form
+                form={form}
+                layout="vertical"
+                initialValues={initialData}
+                disabled={isViewMode} // 如果是查看模式，禁用整个表单
+                style={{ maxWidth: 1000, margin: '0 auto' }}
+            >
+                <Card title="基本信息" style={{ marginBottom: 24 }}>
+                    <FormItem label="规范名称" field="profileName" rules={[{ required: true, message: '规范名称不能为空' }]}>
+                        <Input placeholder="例如：成都兴城集团规范" />
+                    </FormItem>
+                    <FormItem label="描述" field="description">
+                        <Input.TextArea placeholder="规范的简要说明 (可选)" />
+                    </FormItem>
+                </Card>
+
+                <Card title="样式配置" style={{ marginBottom: 24 }}>
+                    <Title heading={6}>文档标题 (Title)</Title>
+                    {renderStyleFields('styles.title')}
+                    
+                    <Divider />
+                    <Title heading={6}>主送单位 (Heading 6)</Title>
+                    {renderStyleFields('styles.recipient')}
+                    
+                    <Divider />
+                    <Title heading={6}>正文 (Normal)</Title>
+                    {renderStyleFields('styles.normal')}
+                    
+                    <Divider />
+                    <Title heading={6}>一级标题 (Heading 1)</Title>
+                    {renderStyleFields('styles.heading1')}
+                    
+                    <Divider />
+                    <Title heading={6}>二级标题 (Heading 2)</Title>
+                    {renderStyleFields('styles.heading2')}
+                    
+                    {/* ... 此处省略 heading3, heading4, signature, date ... */}
+                    {/* 你可以按需添加更多 */}
+                </Card>
+
+                <Card title="特殊规则" style={{ marginBottom: 24 }}>
+                    <Title heading={6}>附件格式</Title>
+                    <Row gutter={24}>
+                        <Col span={8}>
+                            <FormItem label="“附件X”字体" field="styles.attachment.prefixFont">
+                                <Select placeholder="选择字体">{FONT_OPTIONS.map(f => <Select.Option key={f} value={f}>{f}</Select.Option>)}</Select>
+                            </FormItem>
+                        </Col>
+                         <Col span={4}>
+                            <FormItem label="字号 (磅)" field="styles.attachment.prefixSize">
+                                <InputNumber min={9} max={72} />
+                            </FormItem>
+                        </Col>
+                         <Col span={8}>
+                            <FormItem label="附件标题字体" field="styles.attachment.titleFont">
+                                <Select placeholder="选择字体">{FONT_OPTIONS.map(f => <Select.Option key={f} value={f}>{f}</Select.Option>)}</Select>
+                            </FormItem>
+                        </Col>
+                         <Col span={4}>
+                            <FormItem label="字号 (磅)" field="styles.attachment.titleSize">
+                                <InputNumber min={9} max={72} />
+                            </FormItem>
+                        </Col>
+                    </Row>
+                    
+                    <Divider />
+                    
+                    <Title heading={6}>全局规则</Title>
+                    <FormItem field="rules.applyEnFont" triggerPropName="checked">
+                        <Checkbox>自动将数字/英文设为 "Times New Roman"</Checkbox>
+                    </FormItem>
+                    <FormItem field="rules.pageNumber.enable" triggerPropName="checked">
+                        <Checkbox>启用自动页码 (首页不显示, 从第二页开始)</Checkbox>
+                    </FormItem>
+                </Card>
+            </Form>
+        </Layout>
+    );
+};
+
+export default ProfileEditorForm;
