@@ -14,12 +14,16 @@ const api = Object.freeze({
   openPath: (targetPath) => safeIpcInvoke('util:openPath', targetPath),
   getFonts: () => safeIpcInvoke('system:getFonts'),
   openGuide: () => safeIpcInvoke('app:openGuide'),
-  onUpdateAvailable: (callback) => {
-    ipcRenderer.on('update-available', (_event, info) => callback(info))
-  },
-  onUpdateDownloaded: (callback) => {
-    ipcRenderer.on('update-downloaded', (_event, info) => callback(info))
-  },
+  checkMissingFonts: () => safeIpcInvoke('system:checkMissingFonts'),
+  installFont: (fontFileName) => safeIpcInvoke('system:installFont', fontFileName),
+  getAppVersion: () => safeIpcInvoke('system:getAppVersion'),
+  onCheckingForUpdate: (callback) => ipcRenderer.on('checking-for-update', (_event) => callback()),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_event, info) => callback(info)),
+  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', (_event, info) => callback(info)),
+  onUpdateError: (callback) => ipcRenderer.on('update-error', (_event, error) => callback(error)),
+  onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (_event, progress) => callback(progress)),
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (_event, info) => callback(info)),
+  testMockUpdate: () => safeIpcInvoke('test:mockUpdate'),
   quitAndInstall: () => ipcRenderer.send('update:quitAndInstall'),
 })
 

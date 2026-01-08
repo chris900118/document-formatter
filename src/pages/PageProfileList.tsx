@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useProfileStore } from '@/store/profileStore'
 import { StyleConfig } from '@/types/profile'
 import { getFontSizeDisplay } from '@/utils/fontUtils'
-import { 
-  Plus, Search, LayoutGrid, MoreHorizontal, 
+import {
+  Plus, Search, LayoutGrid, MoreHorizontal,
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   ToggleRight, Trash2, Edit
 } from 'lucide-react'
-import { IconFile, IconApps, IconSettings } from '@arco-design/web-react/icon'
 import { Modal, Message, Dropdown, Menu, Tooltip } from '@arco-design/web-react'
+import { AppHeader } from '@/components/AppHeader'
 
 export function PageProfileList() {
   const navigate = useNavigate()
@@ -36,7 +36,7 @@ export function PageProfileList() {
     navigate('/profiles/new')
   }
 
-  const filteredProfiles = profiles.filter(p => 
+  const filteredProfiles = profiles.filter(p =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
@@ -60,12 +60,12 @@ export function PageProfileList() {
       <div className="grid grid-cols-[52px_minmax(40px,1fr)_44px_36px_24px_28px_24px] gap-1 items-center py-1.5 border-b border-gray-100 last:border-0 text-xs">
         {/* 1. 标题 */}
         <span className="text-gray-500 truncate">{label}</span>
-        
+
         {/* 2. 字体 */}
         <div className="font-medium text-gray-900 truncate" title={style.fontFamily}>
           {style.fontFamily}
         </div>
-        
+
         {/* 3. 字号 */}
         <div className="text-gray-600 font-mono text-[11px] text-center bg-gray-100 rounded px-0.5 truncate">
           {getFontSizeDisplay(style.fontSize)}
@@ -105,24 +105,10 @@ export function PageProfileList() {
 
   return (
     <div className="min-h-screen bg-[#F7F8FA] pb-10">
-      {/* 顶部导航 (保持与 HomePage 一致) */}
-      <div className="fixed top-0 left-0 w-full h-16 bg-white/90 backdrop-blur-md border-b border-gray-200 px-6 flex justify-between items-center z-50">
-         <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm"><IconFile style={{ color: 'white', fontSize: 20 }} /></div>
-            <span className="text-lg font-bold text-gray-800">公文格式化助手</span>
-         </div>
-         <div className="flex bg-gray-100/80 p-1 rounded-lg border border-gray-200/50">
-            <button onClick={() => navigate('/')} className="flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-500 hover:text-gray-700">
-              <IconApps className="mr-2" /> 工作台
-            </button>
-            <button className="flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all bg-white text-blue-600 shadow-sm font-bold">
-              <IconSettings className="mr-2" /> 规范管理
-            </button>
-         </div>
-      </div>
+      <AppHeader />
 
       <div className="max-w-[1600px] mx-auto pt-24 px-6">
-        
+
         {/* 顶部工具栏 */}
         <header className="flex items-center justify-between mb-6 bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex items-center gap-3">
@@ -136,17 +122,17 @@ export function PageProfileList() {
             {/* 搜索框 */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="搜索规范..." 
+              <input
+                type="text"
+                placeholder="搜索规范..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9 pl-9 pr-4 bg-gray-50 border border-gray-200 rounded-md text-sm focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all w-64"
               />
             </div>
-            
+
             {/* 新建按钮 */}
-            <button 
+            <button
               onClick={handleCreate}
               className="h-9 px-4 bg-[#165DFF] hover:bg-blue-700 text-white rounded-md text-sm font-medium flex items-center gap-2 shadow-sm transition-colors"
             >
@@ -158,7 +144,7 @@ export function PageProfileList() {
         {/* 卡片网格 - 调整断点以保证卡片宽度足够容纳微缩矩阵 */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
           {filteredProfiles.map((profile) => (
-            <div 
+            <div
               key={profile.id}
               className={`
                 group relative bg-white border rounded-xl p-4 transition-all duration-200
@@ -182,7 +168,7 @@ export function PageProfileList() {
                     {profile.description || '暂无描述'}
                   </p>
                 </div>
-                
+
                 {/* 操作菜单 */}
                 <Dropdown
                   droplist={
@@ -220,7 +206,7 @@ export function PageProfileList() {
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-500 rounded-b-xl opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           ))}
-          
+
           {/* 空状态 */}
           {filteredProfiles.length === 0 && (
             <div className="col-span-full flex flex-col items-center justify-center py-20 text-gray-400">

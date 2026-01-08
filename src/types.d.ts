@@ -26,6 +26,17 @@ declare global {
       openPath: (path: string) => Promise<{ success: boolean; error?: string }>
       openGuide: () => Promise<{ success: boolean; error?: string }>
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
+      checkMissingFonts: () => Promise<{ success: boolean; missing: string[]; error?: string }>
+      installFont: (fontFileName: string) => Promise<{ success: boolean; message?: string; error?: string }>
+      getAppVersion: () => Promise<string>
+      onCheckingForUpdate: (callback: () => void) => void
+      onUpdateAvailable: (callback: (info: any) => void) => void
+      onUpdateNotAvailable: (callback: (info: any) => void) => void
+      onUpdateError: (callback: (error: string) => void) => void
+      onDownloadProgress: (callback: (progress: any) => void) => void
+      onUpdateDownloaded: (callback: (info: any) => void) => void
+      testMockUpdate: () => Promise<void>
+      quitAndInstall: () => void
     }
   }
 }

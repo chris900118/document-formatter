@@ -3,6 +3,7 @@ import { Suspense, lazy } from 'react'
 import HomePage from './pages/HomePage'
 const PageProfileEditor = lazy(() => import('./pages/PageProfileEditor').then(m => ({ default: m.PageProfileEditor })))
 const PageProfileList = lazy(() => import('./pages/PageProfileList').then(m => ({ default: m.PageProfileList })))
+const FontAssistantPage = lazy(() => import('./pages/FontAssistantPage').then(m => ({ default: m.FontAssistantPage })))
 import { usePersistence } from './store/usePersistence'
 
 // 预设规范数据（去除页边距配置，使用 Word 默认页边距）
@@ -33,12 +34,13 @@ function App() {
 
   return (
     <HashRouter>
-      <Suspense fallback={<div style={{padding:20}}>页面加载中...</div>}>
+      <Suspense fallback={<div style={{ padding: 20 }}>页面加载中...</div>}>
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/profiles" element={<PageProfileList />} />
           <Route path="/profiles/new" element={<PageProfileEditor />} />
           <Route path="/profiles/edit/:id" element={<PageProfileEditor />} />
+          <Route path="/fonts" element={<FontAssistantPage />} />
         </Routes>
       </Suspense>
     </HashRouter>

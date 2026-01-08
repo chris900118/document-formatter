@@ -3,10 +3,11 @@ import {
   Upload, Select, Message, Alert, Modal, Table, Spin, Tag, Button, Checkbox, Input, Switch
 } from '@arco-design/web-react'
 import {
-  IconUpload, IconApps, IconSettings, IconFile, IconCheckCircle, IconExclamationCircle
+  IconUpload, IconCheckCircle, IconExclamationCircle
 } from '@arco-design/web-react/icon'
 import { useProfileStore } from '@/store/profileStore'
 import { useNavigate } from 'react-router-dom'
+import { AppHeader } from '@/components/AppHeader'
 
 // --- 类型定义 ---
 interface ManualNumbering {
@@ -43,22 +44,6 @@ export default function HomePage() {
   const [batchExcludedIndices, setBatchExcludedIndices] = useState<Set<number>>(new Set())
   // 目标规范筛选：排除已设置为特定目标规范的段落
   const [excludedTargetStyles, setExcludedTargetStyles] = useState<string[]>([])
-
-  // 版本更新相关状态
-  const [updateInfo, setUpdateInfo] = useState<{ version: string, downloaded: boolean } | null>(null)
-
-  // 监听版本更新
-  useState(() => {
-    const api = (window as any).electronAPI
-    if (api) {
-      api.onUpdateAvailable((info: any) => {
-        setUpdateInfo({ version: info.version, downloaded: false })
-      })
-      api.onUpdateDownloaded((info: any) => {
-        setUpdateInfo({ version: info.version, downloaded: true })
-      })
-    }
-  })
 
   // 手动编号清洗相关状态
   const [isCleanDrawerOpen, setCleanDrawerOpen] = useState(false)
@@ -294,44 +279,9 @@ export default function HomePage() {
 
   // --- 主渲染 ---
   return (
-    <div className="min-h-screen bg-[#f7f8fa] font-sans pb-10">
-      {/* 顶部导航 */}
-      <div className="fixed top-0 left-0 w-full h-16 bg-white/90 backdrop-blur-md border-b border-gray-200 px-6 flex justify-between items-center z-50">
-        <div className="flex items-center gap-3">
-          <div className="bg-blue-600 p-1.5 rounded-lg shadow-sm"><IconFile style={{ color: 'white', fontSize: 20 }} /></div>
-          <span className="text-lg font-bold text-gray-800">公文格式化助手</span>
-        </div>
-        <div className="flex items-center gap-4">
-          {updateInfo && (
-            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm transition-all animate-pulse ${updateInfo.downloaded ? 'bg-green-50 border-green-200 text-green-700 cursor-pointer hover:bg-green-100' : 'bg-blue-50 border-blue-200 text-blue-700'
-              }`}
-              onClick={() => {
-                if (updateInfo.downloaded) {
-                  (window as any).electronAPI.quitAndInstall()
-                }
-              }}
-              title={updateInfo.downloaded ? `新版本 ${updateInfo.version} 已准备就绪，点击重启安装` : `正在下载新版本 ${updateInfo.version}...`}
-            >
-              <div className={`w-2 h-2 rounded-full ${updateInfo.downloaded ? 'bg-green-500' : 'bg-blue-500'}`}></div>
-              <span className="text-xs font-bold uppercase tracking-wider flex items-center gap-1">
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                </svg>
-                Update {updateInfo.downloaded ? 'Ready' : 'Available'}
-              </span>
-            </div>
-          )}
-
-          <div className="flex bg-gray-100/80 p-1 rounded-lg border border-gray-200/50">
-            <button className="flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all bg-white text-blue-600 shadow-sm font-bold">
-              <IconApps className="mr-2" /> 工作台
-            </button>
-            <button onClick={() => navigate('/profiles')} className="flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all text-gray-500 hover:text-gray-700">
-              <IconSettings className="mr-2" /> 规范管理
-            </button>
-          </div>
-        </div>
-      </div>
+    <div className="min-h-screen bg-white font-sans pb-10">
+      {/* 统一 Header */}
+      <AppHeader />
 
       {/* 内容区 */}
       <div className="pt-24 px-6 flex flex-col items-center">

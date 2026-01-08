@@ -66,6 +66,12 @@ export function Layout({ children }: LayoutProps) {
               <span>规范管理</span>
             </Link>
           </MenuItem>
+          <MenuItem key="3">
+            <Link to="/fonts" style={{ display: 'flex', alignItems: 'center', gap: 8, textDecoration: 'none' }}>
+              <span style={{ marginRight: 4 }}>🎨</span>
+              <span>字体助手</span>
+            </Link>
+          </MenuItem>
         </Menu>
 
         <div style={{
@@ -81,8 +87,8 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </Sider>
 
-      <Content style={{ 
-        padding: 40, 
+      <Content style={{
+        padding: 40,
         overflow: 'auto',
         backgroundColor: 'var(--color-fill-1)',
       }}>

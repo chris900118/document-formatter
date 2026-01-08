@@ -17,7 +17,7 @@ export default defineConfig({
           build: {
             outDir: 'dist-electron',
             rollupOptions: {
-              external: ['electron']
+              external: ['electron', 'electron-updater']
             }
           }
         }
@@ -29,13 +29,13 @@ export default defineConfig({
       buildStart() {
         const srcPath = path.join(process.cwd(), 'electron', 'preload.cjs')
         const destPath = path.join(process.cwd(), 'dist-electron', 'preload.cjs')
-        
+
         // 确保目标目录存在
         const destDir = path.dirname(destPath)
         if (!fs.existsSync(destDir)) {
           fs.mkdirSync(destDir, { recursive: true })
         }
-        
+
         // 复制文件
         fs.copyFileSync(srcPath, destPath)
         console.log('[Vite] Copied preload.cjs to dist-electron')

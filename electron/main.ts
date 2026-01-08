@@ -1,5 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
-import { autoUpdater } from 'electron-updater'
+import updater from 'electron-updater'
+const { autoUpdater } = updater
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { spawn } from 'child_process'
@@ -535,8 +536,15 @@ ipcMain.handle('system:getFonts', async () => {
           return a.localeCompare(b, 'zh-CN');
         })
 
-        console.log(`[Electron] Font scan complete. Found ${uniqueFonts.length} fonts (including localized names).`)
-        resolve({ success: true, fonts: uniqueFonts })
+        // 智能过滤：仅保留中文字体和 Times New Roman
+        const filteredFonts = uniqueFonts.filter(font => {
+          const isChinese = /[\u4e00-\u9fa5]/.test(font);
+          const isTimes = font.toLowerCase().includes('times new roman');
+          return isChinese || isTimes;
+        });
+
+        console.log(`[Electron] Font scan complete. Found ${filteredFonts.length} fonts after filtering.`)
+        resolve({ success: true, fonts: filteredFonts })
       })
 
       ps.on('error', (err) => {
@@ -573,7 +581,15 @@ ipcMain.handle('system:getFonts', async () => {
         fonts = output.split('\n').map(line => line.split(':')[0]?.trim())
       }
       const uniqueFonts = [...new Set(fonts.filter(Boolean))].sort()
-      resolve({ success: true, fonts: uniqueFonts })
+
+      // 智能过滤：仅保留中文字体和 Times New Roman
+      const filteredFonts = uniqueFonts.filter(font => {
+        const isChinese = /[\u4e00-\u9fa5]/.test(font);
+        const isTimes = font.toLowerCase().includes('times new roman');
+        return isChinese || isTimes;
+      });
+
+      resolve({ success: true, fonts: filteredFonts })
     })
 
     child.on('error', (err) => {
@@ -591,4 +607,86 @@ ipcMain.handle('app:openGuide', async () => {
   } catch (error: any) {
     return { success: false, error: error.message }
   }
+})
+
+// Check missing fonts
+ipcMain.handle('system:checkMissingFonts', async () => {
+  // Placeholder implementing actual logic if needed later or relying on frontend checks
+  return { success: true, missing: [] };
+})
+
+// Install font
+ipcMain.handle('system:installFont', async (_event, fontFileName: string) => {
+  if (process.platform !== 'win32') {
+    return { success: false, error: 'Font installation is only supported on Windows.' }
+  }
+
+  const fontSourcePath = isDev
+    ? path.join(__dirname, '..', 'resources', 'fonts', fontFileName)
+    : path.join(process.resourcesPath, 'fonts', fontFileName);
+
+  if (!fs.existsSync(fontSourcePath)) {
+    return { success: false, error: `Font file not found: ${fontSourcePath}` }
+  }
+
+  // 简化安装逻辑：直接打开字体文件让用户点击安装
+  // 这样规避了复杂的权限和注册表操作，更稳定
+  const error = await shell.openPath(fontSourcePath);
+  if (error) {
+    return { success: false, error: `无法打开字体文件: ${error}` };
+  }
+  return { success: true, message: '请在弹出的窗口中点击“安装”按钮' };
+})
+
+// 获取应用版本号
+ipcMain.handle('system:getAppVersion', () => {
+  return app.getVersion()
+})
+
+// Auto Updater Events
+const sendToWindow = (channel: string, ...args: any[]) => {
+  mainWindow?.webContents.send(channel, ...args)
+}
+
+autoUpdater.on('checking-for-update', () => sendToWindow('checking-for-update'))
+autoUpdater.on('update-available', (info) => sendToWindow('update-available', info))
+autoUpdater.on('update-not-available', (info) => sendToWindow('update-not-available', info))
+autoUpdater.on('error', (err) => sendToWindow('update-error', err.message))
+autoUpdater.on('download-progress', (progressObj) => sendToWindow('download-progress', progressObj))
+autoUpdater.on('update-downloaded', (info) => sendToWindow('update-downloaded', info))
+
+ipcMain.on('update:quitAndInstall', () => {
+  autoUpdater.quitAndInstall()
+})
+
+// 测试用：模拟更新流程
+ipcMain.handle('test:mockUpdate', () => {
+  console.log('Starting mock update flow...')
+  const sender = mainWindow?.webContents
+  if (!sender) return
+
+  // 1. 检查中
+  sender.send('checking-for-update')
+
+  setTimeout(() => {
+    // 2. 发现更新
+    sender.send('update-available', { version: '1.1.0' })
+
+    // 3. 下载进度
+    let progress = 0
+    const interval = setInterval(() => {
+      progress += 20 // 加快演示速度
+      if (progress > 100) progress = 100
+
+      sender.send('download-progress', { percent: progress })
+
+      if (progress >= 100) {
+        clearInterval(interval)
+        // 4. 下载完成
+        setTimeout(() => {
+          sender.send('update-downloaded', { version: '1.1.0' })
+        }, 500)
+      }
+    }, 800)
+  }, 1500)
 })

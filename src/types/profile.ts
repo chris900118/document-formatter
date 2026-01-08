@@ -155,6 +155,80 @@ export const DEFAULT_PROFILE: FormatProfile = {
 };
 
 /**
+ * 文旅公文规范 (用户自定义预设)
+ */
+export const WENLV_PROFILE: FormatProfile = {
+  id: 'preset_wenlv_standard',
+  name: '文旅局公文规范',
+  description: '符合文旅系统公文格式要求',
+  isDefault: false,
+  createdAt: '2024-03-20T00:00:00Z',
+  updatedAt: '2024-03-20T00:00:00Z',
+  styles: {
+    documentTitle: {
+      fontFamily: '方正小标宋简体',
+      fontSize: 22,
+      lineSpacing: 35,
+      alignment: 'center',
+      bold: true,
+    },
+    body: {
+      fontFamily: '仿宋_GB2312',
+      fontSize: 16,
+      lineSpacing: 28,
+      alignment: 'justify',
+      bold: false,
+      firstLineIndent: 2,
+    },
+    heading1: {
+      fontFamily: '黑体',
+      fontSize: 16,
+      lineSpacing: 28,
+      alignment: 'left',
+      bold: true,
+      firstLineIndent: 2,
+    },
+    heading2: {
+      fontFamily: '楷体_GB2312',
+      fontSize: 16,
+      lineSpacing: 28,
+      alignment: 'left',
+      bold: true,
+      firstLineIndent: 2,
+    },
+    heading3: {
+      fontFamily: '仿宋_GB2312',
+      fontSize: 16,
+      lineSpacing: 28,
+      alignment: 'left',
+      bold: true,
+      firstLineIndent: 2,
+    },
+    heading4: {
+      fontFamily: '仿宋_GB2312',
+      fontSize: 16,
+      lineSpacing: 28,
+      alignment: 'left',
+      bold: true,
+      firstLineIndent: 2,
+    },
+  },
+  specialRules: {
+    autoTimesNewRoman: true,
+    resetIndentsAndSpacing: true,
+    pictureLineSpacing: true,
+    pictureCenterAlign: true,
+    removeManualNumberPrefixes: true,
+  },
+  pageMargins: {
+    top: 3.7,
+    bottom: 3.5,
+    left: 2.8,
+    right: 2.6,
+  }
+};
+
+/**
  * 文件处理状态
  */
 export enum ProcessStatus {

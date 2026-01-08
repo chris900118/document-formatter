@@ -31,7 +31,7 @@
   "dependencies": {
     "@arco-design/web-react": "^2.66.8",
     "electron-store": "^11.0.2",
-    "electron-updater": "^6.6.2",
+    "electron-updater": "^6.7.3",
     "iconv-lite": "^0.6.3",
     "lucide-react": "^0.553.0",
     "react": "^18.2.0",
@@ -109,6 +109,10 @@
       {
         "from": "resources/introduction.html",
         "to": "程序功能介绍.html"
+      },
+      {
+        "from": "resources/fonts",
+        "to": "fonts"
       }
     ]
   }
