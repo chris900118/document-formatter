@@ -14,6 +14,13 @@ const api = Object.freeze({
   openPath: (targetPath) => safeIpcInvoke('util:openPath', targetPath),
   getFonts: () => safeIpcInvoke('system:getFonts'),
   openGuide: () => safeIpcInvoke('app:openGuide'),
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on('update-available', (_event, info) => callback(info))
+  },
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on('update-downloaded', (_event, info) => callback(info))
+  },
+  quitAndInstall: () => ipcRenderer.send('update:quitAndInstall'),
 })
 
 contextBridge.exposeInMainWorld('electronAPI', api)

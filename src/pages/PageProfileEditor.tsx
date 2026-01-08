@@ -2,28 +2,29 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Message } from '@arco-design/web-react'
 import { getFontSizeDisplay, parseFontSizeInput } from '@/utils/fontUtils'
-import { 
-  ArrowLeft, 
-  MousePointerClick, 
-  Type, 
-  Scaling, 
-  ArrowUpDown, 
-  AlignLeft, 
-  AlignCenter, 
-  AlignRight, 
-  AlignJustify, 
-  ListOrdered, 
-  Pencil, 
-  Bold, 
-  CheckCircle2, 
-  CircleDashed, 
-  Settings2, 
-  X, 
+import {
+  ArrowLeft,
+  MousePointerClick,
+  Type,
+  Scaling,
+  ArrowUpDown,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  ListOrdered,
+  Pencil,
+  Bold,
+  CheckCircle2,
+  CircleDashed,
+  Settings2,
+  X,
   Power,
-  Indent 
+  Indent
 } from 'lucide-react'
 import { useProfileStore } from '@/store/profileStore'
 import { FormatProfile, DEFAULT_PROFILE, NumberingConfig, StyleConfig } from '@/types/profile'
+import FontPickerModal from '@/components/FontPickerModal'
 
 // --- Constants ---
 
@@ -87,7 +88,7 @@ export function PageProfileEditor() {
   const navigate = useNavigate()
   const { id } = useParams<{ id: string }>()
   const { profiles, addProfile, updateProfile } = useProfileStore()
-  
+
   // State
   const [profile, setProfile] = useState<FormatProfile>(DEFAULT_PROFILE)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -95,6 +96,8 @@ export function PageProfileEditor() {
   const [activeDrawerStyleKey, setActiveDrawerStyleKey] = useState<string | null>(null)
   const [tempNumbering, setTempNumbering] = useState<NumberingConfig>(DEFAULT_NUMBERING)
   const [systemFonts, setSystemFonts] = useState<string[]>([])
+  const [fontPickerVisible, setFontPickerVisible] = useState(false)
+  const [fontPickerTargetKey, setFontPickerTargetKey] = useState<string | null>(null)
 
   // Load Profile
   useEffect(() => {
@@ -169,6 +172,17 @@ export function PageProfileEditor() {
     }))
   }
 
+  const openFontPicker = (key: string) => {
+    setFontPickerTargetKey(key)
+    setFontPickerVisible(true)
+  }
+
+  const handleFontSelect = (font: string) => {
+    if (fontPickerTargetKey) {
+      updateStyle(fontPickerTargetKey, 'fontFamily', font)
+    }
+  }
+
   const getStyle = (key: string): StyleConfig => {
     const styleKey = key.split('.')[1]
     return profile.styles[styleKey as keyof typeof profile.styles] as StyleConfig
@@ -182,7 +196,7 @@ export function PageProfileEditor() {
   const getCascadeString = (key: string, currentProfile: FormatProfile, currentEditingKey: string | null, currentEditingConfig: NumberingConfig): string => {
     // 1. Get the config for this key
     let config: NumberingConfig | undefined
-    
+
     if (key === currentEditingKey) {
       config = currentEditingConfig
     } else {
@@ -199,13 +213,13 @@ export function PageProfileEditor() {
 
     // Determine the value this level contributes to the cascade string
     let myVal = config.counterType || '1'
-    
+
     // Special Rule: If Level 1 is Chinese ('一' or '壹'), convert to '1' and ignore prefix/suffix.
     // This ensures H2 inherits "1" instead of "第一章".
     if (key === 'styles.heading1' && (myVal === '一' || myVal === '壹')) {
       return '1'
     }
-    
+
     const currentLevelString = `${config.prefix}${myVal}${config.suffix}`
 
     // 2. Check parent
@@ -233,47 +247,47 @@ export function PageProfileEditor() {
       const nextProfile = JSON.parse(JSON.stringify(profile)) as FormatProfile
       const activeStyleKey = activeDrawerStyleKey.split('.')[1]
       const activeStyle = nextProfile.styles[activeStyleKey as keyof typeof nextProfile.styles] as StyleConfig
-      
+
       // Apply the current drawer state
       activeStyle.numbering = { ...tempNumbering }
 
       // 2. Recalculate previews for ALL headings (in order)
       // This ensures that if H1 changes, H2/H3/H4 previews are updated immediately
       const headingKeys = ['styles.heading1', 'styles.heading2', 'styles.heading3', 'styles.heading4']
-      
+
       headingKeys.forEach(key => {
         const styleKey = key.split('.')[1]
         const style = nextProfile.styles[styleKey as keyof typeof nextProfile.styles] as StyleConfig
-        
+
         // Safety check
         if (!style) return
 
         const config = style.numbering
-        
+
         if (config && config.enabled) {
-            const { cascade, separator, prefix, counterType, suffix } = config
-            
-            // Determine display value
-            let val = counterType
-            if (val === '1') val = '1'
-            if (val === '一') val = '一'
-            if (val === '①') val = '①'
-            
-            let res = `${prefix}${val}${suffix}`
-            
-            // Calculate cascade from parent
-            const parentKey = STYLE_HIERARCHY[key]
-            if (cascade && parentKey) {
-                // We pass null for editingKey because we want to use the values in nextProfile
-                // which contains the updates from previous iterations of this loop
-                const parentStr = getCascadeString(parentKey, nextProfile, null, DEFAULT_NUMBERING) 
-                res = `${parentStr}${separator}${res}`
-            }
-            
-            // Update the preview text in the profile
-            if (style.numbering) {
-              style.numbering.previewText = res
-            }
+          const { cascade, separator, prefix, counterType, suffix } = config
+
+          // Determine display value
+          let val = counterType
+          if (val === '1') val = '1'
+          if (val === '一') val = '一'
+          if (val === '①') val = '①'
+
+          let res = `${prefix}${val}${suffix}`
+
+          // Calculate cascade from parent
+          const parentKey = STYLE_HIERARCHY[key]
+          if (cascade && parentKey) {
+            // We pass null for editingKey because we want to use the values in nextProfile
+            // which contains the updates from previous iterations of this loop
+            const parentStr = getCascadeString(parentKey, nextProfile, null, DEFAULT_NUMBERING)
+            res = `${parentStr}${separator}${res}`
+          }
+
+          // Update the preview text in the profile
+          if (style.numbering) {
+            style.numbering.previewText = res
+          }
         }
       })
 
@@ -289,13 +303,13 @@ export function PageProfileEditor() {
   useEffect(() => {
     if (drawerVisible && activeDrawerStyleKey) {
       const { cascade, separator, prefix, counterType, suffix } = tempNumbering
-      
+
       // 1. Determine current level's display value
       let val = counterType
       if (val === '1') val = '1'
       if (val === '一') val = '一'
       if (val === '①') val = '①'
-      
+
       let res = `${prefix}${val}${suffix}`
 
       // 2. If cascade is on, get parent's cascade string
@@ -308,10 +322,10 @@ export function PageProfileEditor() {
       setTempNumbering(prev => ({ ...prev, previewText: res }))
     }
   }, [
-    tempNumbering.cascade, 
-    tempNumbering.separator, 
-    tempNumbering.prefix, 
-    tempNumbering.counterType, 
+    tempNumbering.cascade,
+    tempNumbering.separator,
+    tempNumbering.prefix,
+    tempNumbering.counterType,
     tempNumbering.suffix,
     drawerVisible,
     activeDrawerStyleKey,
@@ -323,7 +337,7 @@ export function PageProfileEditor() {
   const renderViewRow = (item: typeof STYLE_ITEMS_CONFIG[0]) => {
     const style = getStyle(item.key)
     const numbering = style.numbering || DEFAULT_NUMBERING
-    
+
     const alignMap: Record<string, string> = { left: '左对齐', center: '居中', right: '右对齐', justify: '两端对齐' }
     const AlignIcon = {
       left: AlignLeft,
@@ -333,9 +347,9 @@ export function PageProfileEditor() {
     }[style.alignment || 'left'] || AlignLeft
 
     return (
-      <tr 
+      <tr
         key={item.key}
-        className="hover:bg-gray-50 transition-colors cursor-pointer h-[72px] group" 
+        className="hover:bg-gray-50 transition-colors cursor-pointer h-[72px] group"
         onClick={() => setEditingId(item.key)}
       >
         <td className="pl-6 font-medium text-gray-900">{item.label}</td>
@@ -404,27 +418,25 @@ export function PageProfileEditor() {
   const renderEditRow = (item: typeof STYLE_ITEMS_CONFIG[0]) => {
     const style = getStyle(item.key)
     const numbering = style.numbering || DEFAULT_NUMBERING
-    const listId = `font-list-${item.key}`
 
     return (
       <tr key={item.key} className="bg-[#F0F6FF] relative z-10 h-[72px] shadow-[inset_0_1px_4px_rgba(0,0,0,0.02)]">
         <td className="pl-6 font-bold text-[#165DFF]">{item.label}</td>
-        
+
         {/* Font */}
         <td className="px-2">
           <div className="flex gap-2">
-            <input 
-              list={listId} 
-              className="input-base flex-1" 
-              value={style.fontFamily} 
-              placeholder="选择或输入字体"
-              onChange={(e) => updateStyle(item.key, 'fontFamily', e.target.value)}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <datalist id={listId}>
-              {[...FONT_OPTIONS, ...systemFonts].map((f, i) => <option key={i} value={f} />)}
-            </datalist>
-            <button 
+            <div
+              className="input-base flex-1 flex items-center cursor-pointer hover:border-blue-500 bg-white"
+              onClick={(e) => {
+                e.stopPropagation()
+                openFontPicker(item.key)
+              }}
+            >
+              <span className="truncate">{style.fontFamily || '选择字体'}</span>
+            </div>
+
+            <button
               className={`w-8 h-8 border border-gray-300 rounded hover:bg-gray-50 flex items-center justify-center transition-colors ${style.bold ? 'text-[#165DFF] font-bold border-[#165DFF] bg-white' : 'bg-white'}`}
               onClick={(e) => {
                 e.stopPropagation()
@@ -435,12 +447,12 @@ export function PageProfileEditor() {
             </button>
           </div>
         </td>
-        
+
         {/* Size */}
         <td className="px-2">
-          <input 
-            type="text" 
-            className="input-base text-center" 
+          <input
+            type="text"
+            className="input-base text-center"
             value={getFontSizeDisplay(style.fontSize)}
             onChange={(e) => {
               const val = parseFontSizeInput(e.target.value)
@@ -449,18 +461,18 @@ export function PageProfileEditor() {
             onClick={(e) => e.stopPropagation()}
           />
         </td>
-        
+
         {/* Line Height */}
         <td className="px-2">
-          <input 
-            type="number" 
-            className="input-base text-center" 
+          <input
+            type="number"
+            className="input-base text-center"
             value={style.lineSpacing}
             onChange={(e) => updateStyle(item.key, 'lineSpacing', Number(e.target.value))}
             onClick={(e) => e.stopPropagation()}
           />
         </td>
-        
+
         {/* Alignment */}
         <td className="px-2">
           <div className="seg-group" onClick={(e) => e.stopPropagation()}>
@@ -470,7 +482,7 @@ export function PageProfileEditor() {
               { val: 'right', Icon: AlignRight },
               { val: 'justify', Icon: AlignJustify }
             ].map(({ val, Icon }) => (
-              <button 
+              <button
                 key={val}
                 className={`seg-btn ${style.alignment === val ? 'active' : ''}`}
                 onClick={() => updateStyle(item.key, 'alignment', val)}
@@ -480,13 +492,13 @@ export function PageProfileEditor() {
             ))}
           </div>
         </td>
-        
+
         {/* First Line Indent */}
         <td className="px-2">
           {item.showIndent ? (
-            <input 
-              type="number" 
-              className="input-base text-center" 
+            <input
+              type="number"
+              className="input-base text-center"
               value={style.firstLineIndent ?? 0}
               onChange={(e) => updateStyle(item.key, 'firstLineIndent', Number(e.target.value))}
               onClick={(e) => e.stopPropagation()}
@@ -495,11 +507,11 @@ export function PageProfileEditor() {
             <div className="h-8 flex items-center justify-center text-gray-300">-</div>
           )}
         </td>
-        
+
         {/* Numbering */}
         <td className="px-2">
           {item.showNumbering ? (
-            <button 
+            <button
               onClick={(e) => {
                 e.stopPropagation()
                 openDrawer(item.key)
@@ -514,9 +526,9 @@ export function PageProfileEditor() {
             <div className="h-8 flex items-center justify-center text-gray-300">-</div>
           )}
         </td>
-        
+
         <td className="pr-6 text-right">
-          <button 
+          <button
             onClick={(e) => {
               e.stopPropagation()
               setEditingId(null)
@@ -584,9 +596,17 @@ export function PageProfileEditor() {
         .card-body { padding: 24px; }
       `}</style>
 
+      <FontPickerModal
+        visible={fontPickerVisible}
+        onCancel={() => setFontPickerVisible(false)}
+        onSelect={handleFontSelect}
+        systemFonts={systemFonts}
+        recommendedFonts={FONT_OPTIONS}
+      />
+
       {/* ================= 侧边抽屉 ================= */}
-      <div 
-        className={`drawer-overlay ${drawerVisible ? 'active' : ''}`} 
+      <div
+        className={`drawer-overlay ${drawerVisible ? 'active' : ''}`}
         onClick={() => setDrawerVisible(false)}
       ></div>
       <div className={`drawer-panel ${drawerVisible ? 'active' : ''}`}>
@@ -602,11 +622,11 @@ export function PageProfileEditor() {
             <X size={16} />
           </button>
         </div>
-        
+
         {/* 抽屉内容 */}
         <div className="flex-1 overflow-y-auto p-5 space-y-6 bg-white">
           {/* 启用开关 */}
-          <div 
+          <div
             className="flex items-center justify-between p-3 rounded-lg border shadow-sm transition-colors"
             style={{
               borderColor: tempNumbering.enabled ? '#BFDBFE' : '#E5E6EB',
@@ -614,7 +634,7 @@ export function PageProfileEditor() {
             }}
           >
             <div className="flex items-center gap-3">
-              <div 
+              <div
                 className={`p-2 rounded-md transition-colors ${tempNumbering.enabled ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'}`}
               >
                 <Power size={16} />
@@ -626,9 +646,9 @@ export function PageProfileEditor() {
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                className="sr-only peer" 
+              <input
+                type="checkbox"
+                className="sr-only peer"
                 checked={tempNumbering.enabled}
                 onChange={(e) => setTempNumbering(prev => ({ ...prev, enabled: e.target.checked }))}
               />
@@ -637,7 +657,7 @@ export function PageProfileEditor() {
           </div>
 
           {/* 配置项 */}
-          <div 
+          <div
             className="space-y-6 transition-opacity duration-300"
             style={{
               opacity: tempNumbering.enabled ? 1 : 0.4,
@@ -648,17 +668,17 @@ export function PageProfileEditor() {
               <label className="text-xs font-bold text-gray-400 mb-2 block uppercase">级联继承</label>
               <div className="bg-white border border-gray-200 rounded-lg p-3 flex justify-between items-center">
                 <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    className="custom-checkbox" 
+                  <input
+                    type="checkbox"
+                    className="custom-checkbox"
                     checked={tempNumbering.cascade}
                     onChange={(e) => setTempNumbering(prev => ({ ...prev, cascade: e.target.checked }))}
-                  /> 
+                  />
                   <span>继承上级</span>
                 </label>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-gray-400">连接符</span>
-                  <select 
+                  <select
                     className="input-base w-16 h-8 py-0 text-center bg-gray-50"
                     value={tempNumbering.separator}
                     onChange={(e) => setTempNumbering(prev => ({ ...prev, separator: e.target.value }))}
@@ -675,10 +695,10 @@ export function PageProfileEditor() {
               <div className="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-[50px_1fr_50px] gap-2 items-end">
                 <div className="text-center">
                   <label className="text-[10px] text-gray-400 mb-1 block">前缀</label>
-                  <input 
-                    type="text" 
-                    className="input-base text-center px-0 text-blue-600" 
-                    placeholder="-" 
+                  <input
+                    type="text"
+                    className="input-base text-center px-0 text-blue-600"
+                    placeholder="-"
                     value={tempNumbering.prefix}
                     onChange={(e) => setTempNumbering(prev => ({ ...prev, prefix: e.target.value }))}
                   />
@@ -686,7 +706,7 @@ export function PageProfileEditor() {
                 <div className="text-center">
                   <label className="text-[10px] text-gray-400 mb-1 block">类型</label>
                   <div className="relative">
-                    <select 
+                    <select
                       className="input-base pl-2 text-sm"
                       value={tempNumbering.counterType}
                       onChange={(e) => setTempNumbering(prev => ({ ...prev, counterType: e.target.value }))}
@@ -704,10 +724,10 @@ export function PageProfileEditor() {
                 </div>
                 <div className="text-center">
                   <label className="text-[10px] text-gray-400 mb-1 block">后缀</label>
-                  <input 
-                    type="text" 
-                    className="input-base text-center px-0 text-blue-600" 
-                    placeholder="-" 
+                  <input
+                    type="text"
+                    className="input-base text-center px-0 text-blue-600"
+                    placeholder="-"
                     value={tempNumbering.suffix}
                     onChange={(e) => setTempNumbering(prev => ({ ...prev, suffix: e.target.value }))}
                   />
@@ -724,7 +744,7 @@ export function PageProfileEditor() {
             </div>
           </div>
         </div>
-        
+
         {/* 底部按钮 */}
         <div className="p-4 border-t border-gray-100 bg-white flex gap-3">
           <button onClick={() => setDrawerVisible(false)} className="flex-1 py-2 border border-gray-200 rounded text-sm text-gray-600">取消</button>
@@ -734,15 +754,15 @@ export function PageProfileEditor() {
 
       {/* ================= 主界面内容 ================= */}
       <div className="w-full max-w-[1200px] mx-auto px-4 py-6 space-y-6">
-        
+
         {/* 1. 顶部导航 */}
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <ArrowLeft className="w-4 h-4 cursor-pointer hover:text-gray-900" onClick={() => navigate('/profiles')} /> 
+            <ArrowLeft className="w-4 h-4 cursor-pointer hover:text-gray-900" onClick={() => navigate('/profiles')} />
             返回列表 <span className="text-gray-300">/</span> <span className="text-gray-900 font-bold">{profile.name || '新建规范'}</span>
           </div>
           <div className="flex gap-3">
-            <button 
+            <button
               className="px-4 py-2 bg-white border border-gray-200 rounded text-sm text-gray-600 hover:bg-gray-50 shadow-sm transition-colors"
               onClick={() => {
                 if (id) {
@@ -755,7 +775,7 @@ export function PageProfileEditor() {
             >
               重置
             </button>
-            <button 
+            <button
               className="px-4 py-2 bg-[#165DFF] text-white rounded text-sm hover:bg-blue-700 shadow-sm transition-colors"
               onClick={handleSave}
             >
@@ -771,18 +791,18 @@ export function PageProfileEditor() {
             <div className="grid grid-cols-2 gap-8">
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">规范名称 <span className="text-red-500">*</span></label>
-                <input 
-                  type="text" 
-                  className="input-base h-9" 
+                <input
+                  type="text"
+                  className="input-base h-9"
                   value={profile.name}
                   onChange={(e) => setProfile(prev => ({ ...prev, name: e.target.value }))}
                 />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5">描述</label>
-                <input 
-                  type="text" 
-                  className="input-base h-9" 
+                <input
+                  type="text"
+                  className="input-base h-9"
                   value={profile.description || ''}
                   onChange={(e) => setProfile(prev => ({ ...prev, description: e.target.value }))}
                 />
@@ -816,7 +836,7 @@ export function PageProfileEditor() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 text-sm bg-white">
-                {STYLE_ITEMS_CONFIG.map(item => 
+                {STYLE_ITEMS_CONFIG.map(item =>
                   editingId === item.key ? renderEditRow(item) : renderViewRow(item)
                 )}
               </tbody>
@@ -831,9 +851,9 @@ export function PageProfileEditor() {
             <div className="grid grid-cols-2 gap-x-12 gap-y-8">
               {/* 规则 1 */}
               <div className="flex gap-3">
-                <input 
-                  type="checkbox" 
-                  className="custom-checkbox mt-1" 
+                <input
+                  type="checkbox"
+                  className="custom-checkbox mt-1"
                   checked={profile.specialRules.autoTimesNewRoman}
                   onChange={(e) => setProfile(prev => ({ ...prev, specialRules: { ...prev.specialRules, autoTimesNewRoman: e.target.checked } }))}
                 />
@@ -844,9 +864,9 @@ export function PageProfileEditor() {
               </div>
               {/* 规则 2 */}
               <div className="flex gap-3">
-                <input 
-                  type="checkbox" 
-                  className="custom-checkbox mt-1" 
+                <input
+                  type="checkbox"
+                  className="custom-checkbox mt-1"
                   checked={profile.specialRules.resetIndentsAndSpacing}
                   onChange={(e) => setProfile(prev => ({ ...prev, specialRules: { ...prev.specialRules, resetIndentsAndSpacing: e.target.checked } }))}
                 />
@@ -857,9 +877,9 @@ export function PageProfileEditor() {
               </div>
               {/* 规则 3 */}
               <div className="flex gap-3">
-                <input 
-                  type="checkbox" 
-                  className="custom-checkbox mt-1" 
+                <input
+                  type="checkbox"
+                  className="custom-checkbox mt-1"
                   checked={profile.specialRules.pictureLineSpacing}
                   onChange={(e) => setProfile(prev => ({ ...prev, specialRules: { ...prev.specialRules, pictureLineSpacing: e.target.checked } }))}
                 />
@@ -870,9 +890,9 @@ export function PageProfileEditor() {
               </div>
               {/* 规则 4 */}
               <div className="flex gap-3">
-                <input 
-                  type="checkbox" 
-                  className="custom-checkbox mt-1" 
+                <input
+                  type="checkbox"
+                  className="custom-checkbox mt-1"
                   checked={profile.specialRules.pictureCenterAlign}
                   onChange={(e) => setProfile(prev => ({ ...prev, specialRules: { ...prev.specialRules, pictureCenterAlign: e.target.checked } }))}
                 />
@@ -883,9 +903,9 @@ export function PageProfileEditor() {
               </div>
               {/* 规则 5 */}
               <div className="flex gap-3">
-                <input 
-                  type="checkbox" 
-                  className="custom-checkbox mt-1" 
+                <input
+                  type="checkbox"
+                  className="custom-checkbox mt-1"
                   checked={profile.specialRules.removeManualNumberPrefixes}
                   onChange={(e) => setProfile(prev => ({ ...prev, specialRules: { ...prev.specialRules, removeManualNumberPrefixes: e.target.checked } }))}
                 />

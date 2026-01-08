@@ -49,7 +49,7 @@ export interface FormatProfile {
   id: string
   name: string
   description?: string
-  
+
   // 样式映射配置
   styles: {
     documentTitle: StyleConfig // 文档标题 (Title)
@@ -59,7 +59,7 @@ export interface FormatProfile {
     heading3: StyleConfig // 三级标题 (Heading 3)
     heading4: StyleConfig // 四级标题 (Heading 4)
   }
-  
+
   // 特殊规则处理器
   specialRules: SpecialRules
 
@@ -70,7 +70,7 @@ export interface FormatProfile {
     left: number
     right: number
   }
-  
+
   // 元数据
   isDefault: boolean
   createdAt: string
@@ -136,7 +136,7 @@ export const DEFAULT_PROFILE: FormatProfile = {
       firstLineIndent: 2,
     },
   },
-  
+
   specialRules: {
     autoTimesNewRoman: true,
     resetIndentsAndSpacing: true,
@@ -150,7 +150,7 @@ export const DEFAULT_PROFILE: FormatProfile = {
     left: 2.8,
     right: 2.6,
   },
-  
+
 
 };
 

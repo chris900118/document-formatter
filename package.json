@@ -31,6 +31,7 @@
   "dependencies": {
     "@arco-design/web-react": "^2.66.8",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.6.2",
     "iconv-lite": "^0.6.3",
     "lucide-react": "^0.553.0",
     "react": "^18.2.0",
@@ -57,6 +58,13 @@
   "build": {
     "appId": "com.documentformatter.app",
     "productName": "公文格式化助手",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "chris900118",
+        "repo": "document-formatter"
+      }
+    ],
     "compression": "maximum",
     "directories": {
       "output": "release"
@@ -70,14 +78,17 @@
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
-      ],
-      "icon": "public/icon.ico"
+      ]
     },
     "portable": {
       "artifactName": "${productName}-${version}-Portable.${ext}"
@@ -85,8 +96,7 @@
     "mac": {
       "target": [
         "dmg"
-      ],
-      "icon": "public/icon.icns"
+      ]
     },
     "extraResources": [
       {
@@ -97,7 +107,7 @@
         ]
       },
       {
-        "from": "resources/程序功能介绍.html",
+        "from": "resources/introduction.html",
         "to": "程序功能介绍.html"
       }
     ]

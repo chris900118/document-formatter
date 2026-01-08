@@ -12,7 +12,15 @@ const api = Object.freeze({
   loadProfiles: () => safeInvoke('store:loadProfiles'),
   showInFolder: (path: string) => safeInvoke('util:showInFolder', path),
   openPath: (path: string) => safeInvoke('util:openPath', path),
+  openExternal: (url: string) => safeInvoke('util:openExternal', url),
   getFonts: () => safeInvoke('system:getFonts'),
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    ipcRenderer.on('update-available', (_event, info) => callback(info))
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    ipcRenderer.on('update-downloaded', (_event, info) => callback(info))
+  },
+  quitAndInstall: () => ipcRenderer.send('update:quitAndInstall'),
 })
 
 contextBridge.exposeInMainWorld('electronAPI', api)

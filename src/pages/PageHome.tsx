@@ -1,6 +1,6 @@
-import { 
-  Upload, 
-  Select, 
+import {
+  Upload,
+  Select,
   Message,
   Alert,
   Modal,
@@ -11,7 +11,7 @@ import {
   Checkbox,
   Input,
 } from '@arco-design/web-react'
-import { 
+import {
   IconUpload,
   IconApps,
   IconSettings,
@@ -39,7 +39,7 @@ export function PageHome() {
 
   // 页面状态
   const [view, setView] = useState<'home' | 'settings'>('home')
-  
+
   // 核心状态
   const [isScanning, setIsScanning] = useState(false)
   const [scanReport, setScanReport] = useState<ScanItem[]>([])
@@ -54,7 +54,7 @@ export function PageHome() {
   // 智能扫描疑似标题
   const handleScan = async (file: File | undefined) => {
     if (!file) return
-    
+
     const filePath = (file as any).path || ''
     if (!filePath) {
       Message.error('无法获取文件路径，请确保在Electron环境中运行')
@@ -62,8 +62,17 @@ export function PageHome() {
     }
 
     setCurrentFilePath(filePath)
+
+    // --- 核心修复：重置所有与上一个文件相关的状态 ---
+    setScanReport([])
+    setMappings({})
+    setTextReplacements({})
+    setExcludedStyles([])
+    setExcludedTargets([])
+    setSearchKeyword('')
+
     setIsScanning(true)
-    
+
     try {
       const report = await window.electronAPI.scanHeadings(filePath, 16)
       if (report.success && report.structure && report.structure.length > 0) {
@@ -99,7 +108,7 @@ export function PageHome() {
   // 确认纠偏并最终格式化
   const handleConfirmFormat = async (finalMappings = mappings) => {
     setScanModalOpen(false)
-    
+
     if (!currentFilePath || !selectedProfileId) {
       Message.error('请先选择文件和格式规范')
       return
@@ -112,21 +121,21 @@ export function PageHome() {
     }
 
     Message.loading({ content: '正在格式化文档...', duration: 0, id: 'format-loading' })
-    
+
     try {
       const payload = {
         profile,
         mappings: finalMappings,
         text_replacements: textReplacements
       }
-      
+
       // 调试日志：输出 mappings 内容
       console.log('[PageHome] Sending mappings:', finalMappings)
       console.log('[PageHome] Sending text_replacements:', textReplacements)
       console.log('[PageHome] Sending payload:', JSON.stringify(payload, null, 2))
-      
+
       const result = await window.electronAPI.formatDocument(currentFilePath, payload)
-      
+
       Message.clear()
       if (result.success) {
         Message.success(result.message)
@@ -144,7 +153,7 @@ export function PageHome() {
 
   // 获取所有唯一样式用于排除选择器
   const uniqueStyles = Array.from(new Set(scanReport.map(item => item.style).filter(Boolean)))
-  
+
   // 目标规范标签映射
   const targetLabels: Record<string, string> = {
     documentTitle: '文档标题',
@@ -154,22 +163,22 @@ export function PageHome() {
     heading4: '四级标题',
     body: '正文'
   }
-  
+
   // 过滤后的扫描结果（排除指定原样式 + 排除指定目标规范 + 搜索关键字）
   const filteredScanReport = scanReport.filter(item => {
     // 排除原样式
     if (excludedStyles.includes(item.style)) return false
-    
+
     // 排除目标规范
     const targetKey = mappings[String(item.index)] || item.suggested_key
     if (excludedTargets.includes(targetKey)) return false
-    
+
     // 搜索关键字过滤
     if (searchKeyword && !item.text.toLowerCase().includes(searchKeyword.toLowerCase())) return false
-    
+
     return true
   })
-  
+
   // 批量纠偏函数
   const handleBatchCorrect = (targetKey: string) => {
     const newMappings = { ...mappings }
@@ -197,8 +206,8 @@ export function PageHome() {
         const fontSize = styleConfig?.fontSize ? `${styleConfig.fontSize}pt` : 'inherit'
 
         // 4. 获取当前显示文本 (优先取 textReplacements)
-        const displayText = textReplacements[String(record.index)] !== undefined 
-          ? textReplacements[String(record.index)] 
+        const displayText = textReplacements[String(record.index)] !== undefined
+          ? textReplacements[String(record.index)]
           : text
 
         // 5. 应用样式（内联字体覆盖Tailwind默认）
@@ -206,10 +215,10 @@ export function PageHome() {
         return (
           <div className="relative">
             <Input
-              style={{ 
-                fontFamily, 
-                fontSize, 
-                height: 'auto', 
+              style={{
+                fontFamily,
+                fontSize,
+                height: 'auto',
                 padding: '8px 12px',
                 width: '100%',
                 backgroundColor: '#f7f8fa',
@@ -296,22 +305,22 @@ export function PageHome() {
           <div className="absolute top-0 right-0 p-6 opacity-5 group-hover:opacity-10 transition-opacity">
             <IconSettings style={{ fontSize: 120, color: '#165DFF' }} />
           </div>
-          
+
           <div className="flex items-center gap-3 mb-6 relative z-10">
             <span className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center font-bold text-sm shadow-md">1</span>
             <span className="font-bold text-gray-800 text-lg">选择目标规范</span>
           </div>
-          
+
           <p className="text-sm text-gray-500 mb-8 leading-relaxed relative z-10">
             请选择适用于本文档的格式标准。系统将自动应用该规范中定义的字体、字号及版式布局。
           </p>
-          
+
           <div className="relative z-10">
-            <Select 
-              placeholder="请选择要应用的格式规范" 
-              value={selectedProfileId || undefined} 
-              onChange={(value) => selectProfile(value)} 
-              size="large" 
+            <Select
+              placeholder="请选择要应用的格式规范"
+              value={selectedProfileId || undefined}
+              onChange={(value) => selectProfile(value)}
+              size="large"
               style={{ width: '100%' }}
             >
               {profiles.map((profile) => (
@@ -321,7 +330,7 @@ export function PageHome() {
               ))}
             </Select>
           </div>
-          
+
           {/* 底部入口已移除，避免与右上角标签切换重复 */}
         </div>
       </div>
@@ -333,7 +342,7 @@ export function PageHome() {
             <span className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-md shadow-blue-200">2</span>
             <span className="font-bold text-gray-800 text-lg">上传文档</span>
           </div>
-          
+
           <Upload
             drag
             multiple={false}
@@ -370,26 +379,24 @@ export function PageHome() {
           </div>
           <span className="text-lg font-bold text-gray-800 tracking-tight">公文格式化助手</span>
         </div>
-        
+
         {/* 右侧导航按钮 - 胶囊切换器 */}
         <div className="flex bg-gray-100/80 p-1 rounded-lg border border-gray-200/50">
-          <button 
-            onClick={() => setView('home')} 
-            className={`flex items-center px-5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-              view === 'home' 
-                ? 'bg-white text-blue-600 shadow-sm font-bold' 
+          <button
+            onClick={() => setView('home')}
+            className={`flex items-center px-5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${view === 'home'
+                ? 'bg-white text-blue-600 shadow-sm font-bold'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-            }`}
+              }`}
           >
             <IconApps className="mr-2" /> 工作台
           </button>
-          <button 
-            onClick={() => navigate('/profiles')} 
-            className={`flex items-center px-5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${
-              view === 'settings' 
-                ? 'bg-white text-blue-600 shadow-sm font-bold' 
+          <button
+            onClick={() => navigate('/profiles')}
+            className={`flex items-center px-5 py-1.5 rounded-md text-sm font-medium transition-all duration-200 ${view === 'settings'
+                ? 'bg-white text-blue-600 shadow-sm font-bold'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-200/50'
-            }`}
+              }`}
           >
             <IconSettings className="mr-2" /> 规范管理
           </button>
@@ -413,10 +420,10 @@ export function PageHome() {
     <div className="min-h-screen bg-[#f7f8fa]">
       {/* 顶部导航栏 */}
       {renderNavbar()}
-      
+
       {/* 主内容区：添加顶部间距避免被导航栏遮挡 */}
       <div className="pt-24 pb-10 px-6 flex flex-col items-center">
-        
+
         {/* 欢迎语 */}
         <div className="mb-10 text-center w-full max-w-6xl">
           <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">开始新的格式化任务</h2>
@@ -443,12 +450,12 @@ export function PageHome() {
         focusLock={true}
       >
         <div className="mb-4 space-y-4">
-          <Alert 
-            type="info" 
+          <Alert
+            type="info"
             showIcon
-            content={`共扫描到 ${scanReport.length} 个段落，当前显示 ${filteredScanReport.length} 个（已过滤 ${scanReport.length - filteredScanReport.length} 个）。可调整筛选条件或批量修改目标规范。`} 
+            content={`共扫描到 ${scanReport.length} 个段落，当前显示 ${filteredScanReport.length} 个（已过滤 ${scanReport.length - filteredScanReport.length} 个）。可调整筛选条件或批量修改目标规范。`}
           />
-          
+
           {/* 整合的搜索/筛选区域 */}
           <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/50 p-5 rounded-xl border border-blue-100">
             {/* 搜索框 */}
@@ -469,7 +476,7 @@ export function PageHome() {
                 style={{ width: '100%' }}
               />
             </div>
-            
+
             {/* 排除原样式 */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -480,8 +487,8 @@ export function PageHome() {
                   </Button>
                 )}
               </div>
-              <Checkbox.Group 
-                value={excludedStyles} 
+              <Checkbox.Group
+                value={excludedStyles}
                 onChange={(values) => setExcludedStyles(values as string[])}
                 style={{ width: '100%' }}
               >
@@ -497,7 +504,7 @@ export function PageHome() {
                 </div>
               </Checkbox.Group>
             </div>
-            
+
             {/* 排除目标规范 */}
             <div className="mb-4">
               <div className="flex items-center gap-2 mb-2">
@@ -508,8 +515,8 @@ export function PageHome() {
                   </Button>
                 )}
               </div>
-              <Checkbox.Group 
-                value={excludedTargets} 
+              <Checkbox.Group
+                value={excludedTargets}
                 onChange={(values) => setExcludedTargets(values as string[])}
                 style={{ width: '100%' }}
               >
@@ -528,7 +535,7 @@ export function PageHome() {
                 </div>
               </Checkbox.Group>
             </div>
-            
+
             {/* 批量纠偏按钮 */}
             <div>
               <div className="flex items-center gap-2 mb-2">
@@ -537,8 +544,8 @@ export function PageHome() {
               </div>
               <div className="flex flex-wrap gap-2">
                 {Object.entries(targetLabels).map(([key, label]) => (
-                  <Button 
-                    key={key} 
+                  <Button
+                    key={key}
                     size="small"
                     type="outline"
                     onClick={() => handleBatchCorrect(key)}
@@ -551,12 +558,12 @@ export function PageHome() {
             </div>
           </div>
         </div>
-        
-        <Table 
-          columns={columns} 
-          data={filteredScanReport} 
-          pagination={false} 
-          scroll={{ y: 350 }} 
+
+        <Table
+          columns={columns}
+          data={filteredScanReport}
+          pagination={false}
+          scroll={{ y: 350 }}
           rowKey="index"
           stripe
           border

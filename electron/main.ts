@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from 'electron'
+import { autoUpdater } from 'electron-updater'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { spawn } from 'child_process'
@@ -33,12 +34,12 @@ let guideWindow: BrowserWindow | null = null
 function createWindow() {
   // 使用 .cjs 扩展名
   const preloadPath = path.join(__dirname, 'preload.cjs')
-  
+
   console.log('[Main] isDev:', isDev)
   console.log('[Main] __dirname:', __dirname)
   console.log('[Main] Preload path:', preloadPath)
   console.log('[Main] Preload exists:', fs.existsSync(preloadPath))
-  
+
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -47,7 +48,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true
-    }
+    },
+    autoHideMenuBar: true // 隐藏菜单栏
   })
 
   // 等待窗口创建完成后再加载内容
@@ -178,14 +180,14 @@ function openGuideWindow() {
   let guidePath: string
   if (isDev) {
     // 开发环境下从源文件读取
-    guidePath = path.join(__dirname, '../resources/程序功能介绍.html')
+    guidePath = path.join(__dirname, '../resources/introduction.html')
   } else {
     // 生产环境从 resources 目录读取
     guidePath = path.join(process.resourcesPath, '程序功能介绍.html')
   }
 
   console.log('[Guide] Loading guide from:', guidePath)
-  
+
   if (fs.existsSync(guidePath)) {
     guideWindow.loadFile(guidePath)
   } else {
@@ -216,8 +218,67 @@ if (!gotTheLock) {
       mainWindow.focus()
     }
   })
-  app.whenReady().then(createWindow)
+  app.whenReady().then(() => {
+    createWindow()
+    // 启动时检查更新
+    if (!isDev) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdatesAndNotify()
+      }, 3000)
+    }
+  })
 }
+
+// 自动更新逻辑配置
+autoUpdater.on('checking-for-update', () => {
+  console.log('[Updater] Checking for update...')
+})
+
+autoUpdater.on('update-available', (info) => {
+  console.log('[Updater] Update available:', info.version)
+  if (mainWindow) {
+    mainWindow.webContents.send('update-available', info)
+  }
+})
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('[Updater] Update not available:', info.version)
+})
+
+autoUpdater.on('error', (err) => {
+  console.error('[Updater] Error in auto-updater:', err)
+})
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = "Download speed: " + progressObj.bytesPerSecond
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%'
+  log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')'
+  console.log('[Updater]', log_message)
+})
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('[Updater] Update downloaded:', info.version)
+  if (mainWindow) {
+    mainWindow.webContents.send('update-downloaded', info)
+  }
+  // 保留原有的弹窗提示作为双重保险，或者您可以去掉它完全交给前端处理
+  dialog.showMessageBox({
+    type: 'info',
+    title: '更新已就绪',
+    message: `新版本 ${info.version} 已下载完成，重启应用以安装更新。`,
+    buttons: ['现在重启', '稍后处理'],
+    defaultId: 0,
+    cancelId: 1
+  }).then((result) => {
+    if (result.response === 0) {
+      autoUpdater.quitAndInstall()
+    }
+  })
+})
+
+ipcMain.on('update:quitAndInstall', () => {
+  autoUpdater.quitAndInstall()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -239,7 +300,7 @@ ipcMain.handle('dialog:openFile', async () => {
       { name: 'Word Documents', extensions: ['docx', 'doc'] }
     ]
   })
-  
+
   if (result.canceled) {
     return null
   }
@@ -274,7 +335,7 @@ ipcMain.handle('document:scan_headings', async (_event, inputPath: string, baseF
       console.log('[scan_headings] exit code:', code)
       console.log('[scan_headings] stdout:', stdoutData)
       console.log('[scan_headings] stderr:', stderrData)
-      
+
       if (code === 0) {
         try {
           const result = JSON.parse(stdoutData)
@@ -321,7 +382,9 @@ ipcMain.handle('document:format', async (_event, inputPath: string, payload: { p
     }
     // 新参数格式：['format', inputPath, desiredOutputPath, JSON.stringify(payload)]
     const args = ['format', inputPath, desiredOutputPath, JSON.stringify(payload)]
-    const proc = spawn(formatterPath, args)
+    const proc = spawn(formatterPath, args, {
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' }
+    })
     let stdoutData = ''
     let stderrData = ''
     proc.stdout.on('data', (data) => {
@@ -334,7 +397,7 @@ ipcMain.handle('document:format', async (_event, inputPath: string, payload: { p
       console.log('[document:format] exit code:', code)
       console.log('[document:format] stdout:', stdoutData)
       console.log('[document:format] stderr:', stderrData)
-      
+
       if (code === 0) {
         try {
           const result = JSON.parse(stdoutData)
@@ -391,156 +454,130 @@ ipcMain.handle('util:showInFolder', async (_e, targetPath: string) => {
 ipcMain.handle('util:openPath', async (_e, targetPath: string) => {
   if (targetPath && fs.existsSync(targetPath)) {
     const result = await shell.openPath(targetPath)
-    if (!result) return { success: true }
     return { success: false, error: result }
   }
   return { success: false, error: '路径不存在' }
 })
 
+// 打开外部链接 (URL/协议)
+ipcMain.handle('util:openExternal', async (_e, url: string) => {
+  try {
+    await shell.openExternal(url)
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
 // 读取系统字体列表
 ipcMain.handle('system:getFonts', async () => {
-  // Windows系统使用PowerShell + .NET(WPF) 获取字体，可靠且支持_GBK等完整字体名
+  // Windows系统使用PowerShell + .NET(WPF) 获取字体
   if (process.platform === 'win32') {
     return new Promise((resolve) => {
-      // 使用 .NET (WPF) 的 Fonts.GetFontFamilies 获取完整“友好名称”列表
+      // 核心修复点：
+      // 1. 加载 PresentationCore
+      // 2. 遍历字体家族
+      // 3. 同时输出 .Source (内部英文名，如 KaiTi) 
+      // 4. 同时输出 .FamilyNames["zh-cn"] (显示中文名，如 楷体)
       const psScript = `
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8;
-        Add-Type -AssemblyName PresentationCore; 
-        $fonts = [System.Windows.Media.Fonts]::GetFontFamilies('file:///C:/Windows/Fonts/'); 
-        $fontList = New-Object System.Collections.ArrayList; 
-        foreach ($family in $fonts) { 
-          $name = $null; 
-          if ($family.FamilyNames.ContainsKey('zh-cn')) { $name = $family.FamilyNames['zh-cn'] } 
-          elseif ($family.FamilyNames.ContainsKey('en-us')) { $name = $family.FamilyNames['en-us'] } 
-          else { $name = ($family.FamilyNames.Values | Select-Object -First 1) } 
-          if (-not $name -or $name -eq '') { $name = $family.Source } 
-          if ($name) { $fontList.Add($name) } 
-        }; 
-        $fontList | Sort-Object -Unique
+        Add-Type -AssemblyName PresentationCore;
+        $fonts = [System.Windows.Media.Fonts]::SystemFontFamilies;
+        foreach ($family in $fonts) {
+            # 输出英文内部名 (如 KaiTi)
+            Write-Output $family.Source;
+            
+            # 尝试输出中文名称 (如 楷体)
+            if ($family.FamilyNames.ContainsKey("zh-cn")) {
+                Write-Output $family.FamilyNames["zh-cn"];
+            }
+            
+            # 尝试输出英文显示名称 (如 Microsoft YaHei)
+            if ($family.FamilyNames.ContainsKey("en-us")) {
+                Write-Output $family.FamilyNames["en-us"];
+            }
+        }
       `
-      
+
       const ps = spawn('powershell', [
         '-NoProfile',
         '-NonInteractive',
-        '-OutputFormat', 'Text',
-        '-Command', psScript
+        '-Command',
+        psScript
       ])
-      
+
       let output = ''
       let errorOutput = ''
-      
-      ps.stdout.on('data', (data: Buffer) => {
+
+      ps.stdout.on('data', (data) => {
         output += data.toString()
       })
-      
-      ps.stderr.on('data', (data: Buffer) => {
+
+      ps.stderr.on('data', (data) => {
         errorOutput += data.toString()
       })
-      
-      ps.on('close', (code: number | null) => {
+
+      ps.on('close', (code) => {
         if (code !== 0) {
           console.error('[Electron] PowerShell字体查询失败:', errorOutput)
           return resolve({ success: false, fonts: [], error: errorOutput })
         }
-        const lines = output.split(/\r?\n/).map(l => l.trim()).filter(Boolean)
 
-        const uniqueFonts = Array.from(new Set(lines)).sort((a, b) => {
-          // 中文字体排在前面
-          const aChinese = /[\u4e00-\u9fa5]/.test(a)
-          const bChinese = /[\u4e00-\u9fa5]/.test(b)
-          if (aChinese && !bChinese) return -1
-          if (!aChinese && bChinese) return 1
-          return a.localeCompare(b, 'zh-CN')
-        })
-        
-        // 过滤：保留中文名 或 常见CJK英文字体家族（以及 Times New Roman）
-        const cjkFamilyRegex = /(_GBK|GB2312|SimSun|NSimSun|SimHei|KaiTi|FangSong|FZ|FangZheng|YaHei|YouYuan|LiSu|DengXian|PingFang|Heiti|Hiragino|Songti|STSong|STKaiti|STHeiti|Noto\s+(Sans|Serif)\s+CJK|Source\s+Han\s+(Sans|Serif))/i
-        const filteredFonts = uniqueFonts.filter((f) => {
-          const name = f || ''
-          const isChineseName = /[\u4e00-\u9fa5]/.test(name)
-          const isCjkEnglish = cjkFamilyRegex.test(name)
-          const isTimes = name.toLowerCase() === 'times new roman'
-          return isChineseName || isCjkEnglish || isTimes
+        // 处理输出：按行分割，去空，去重
+        const rawFonts = output.split(/\r?\n/).map(line => line.trim()).filter(Boolean)
+
+        // 数组去重 + 排序 (让中文排在前面方便查看)
+        const uniqueFonts = Array.from(new Set(rawFonts)).sort((a, b) => {
+          const aIsChinese = /[\u4e00-\u9fa5]/.test(a);
+          const bIsChinese = /[\u4e00-\u9fa5]/.test(b);
+          if (aIsChinese && !bIsChinese) return -1;
+          if (!aIsChinese && bIsChinese) return 1;
+          return a.localeCompare(b, 'zh-CN');
         })
 
-        console.log(`[Electron] 成功解析 ${uniqueFonts.length} 个字体，过滤后保留 ${filteredFonts.length} 个`)
-        console.log(`[Electron] 示例字体:`, filteredFonts.slice(0, 10))
-        
-        if (filteredFonts.length === 0) {
-          return resolve({ success: false, fonts: [], error: '未能解析到任何字体' })
-        }
-        
-        return resolve({ success: true, fonts: filteredFonts })
+        console.log(`[Electron] Font scan complete. Found ${uniqueFonts.length} fonts (including localized names).`)
+        resolve({ success: true, fonts: uniqueFonts })
       })
-      
-      ps.on('error', (err: Error) => {
-        console.error('[Electron] 无法启动PowerShell:', err)
+
+      ps.on('error', (err) => {
+        console.error('[Electron] Failed to start PowerShell:', err)
         resolve({ success: false, fonts: [], error: err.message })
       })
     })
   }
-  
-  // macOS 和 Linux 使用原有方式
-  let command: string
-  let args: string[]
-  
+
+  // Non-Windows logic
+  let command = 'bash';
+  let args = ['-lc', "fc-list :family | sort -u"];
+
   if (process.platform === 'darwin') {
-    command = 'system_profiler'
-    args = ['SPFontsDataType', '-detailLevel', 'mini']
-  } else if (process.platform === 'linux') {
-    command = 'bash'
-    args = ['-lc', "fc-list :family | sort -u"]
-  } else {
-    return { success: false, fonts: [], error: 'Unsupported OS' }
+    command = 'system_profiler';
+    args = ['SPFontsDataType', '-detailLevel', 'mini'];
   }
-  
+
   return new Promise((resolve) => {
     const child = spawn(command, args, { shell: false })
     let output = ''
-    let errorOutput = ''
-    
+
     child.stdout.on('data', (data) => {
       output += data.toString()
     })
-    
-    child.stderr.on('data', (data) => {
-      errorOutput += data.toString()
-    })
-    
+
     child.on('close', (code) => {
-      if (code !== 0) {
-        console.error(`[Electron] system:getFonts 错误 (Code: ${code}): ${errorOutput}`)
-        return resolve({ success: false, fonts: [], error: errorOutput })
-      }
-      
       let fonts: string[] = []
       if (process.platform === 'darwin') {
-        fonts = output
-          .split('\n')
+        fonts = output.split('\n')
           .filter(line => line.includes('Family:'))
-          .map(line => line.replace(/.*Family:\s*/,'').trim())
-          .filter(Boolean)
+          .map(line => line.replace(/.*Family:\s*/, '').trim())
       } else {
-        fonts = output
-          .split('\n')
-          .map(line => line.split(':')[0]?.trim())
-          .filter(Boolean)
+        fonts = output.split('\n').map(line => line.split(':')[0]?.trim())
       }
-      
-      const uniqueFonts = [...new Set(fonts)].sort()
-      const cjkFamilyRegex = /(_GBK|GB2312|SimSun|NSimSun|SimHei|KaiTi|FangSong|FZ|FangZheng|YaHei|YouYuan|LiSu|DengXian|PingFang|Heiti|Hiragino|Songti|STSong|STKaiti|STHeiti|Noto\s+(Sans|Serif)\s+CJK|Source\s+Han\s+(Sans|Serif))/i
-      const filteredFonts = uniqueFonts.filter((f) => {
-        const name = f || ''
-        const isChineseName = /[\u4e00-\u9fa5]/.test(name)
-        const isCjkEnglish = cjkFamilyRegex.test(name)
-        const isTimes = name.toLowerCase() === 'times new roman'
-        return isChineseName || isCjkEnglish || isTimes
-      })
-      resolve({ success: true, fonts: filteredFonts })
+      const uniqueFonts = [...new Set(fonts.filter(Boolean))].sort()
+      resolve({ success: true, fonts: uniqueFonts })
     })
-    
+
     child.on('error', (err) => {
-      console.error('[Electron] 无法启动字体命令:', err)
+      console.error('[Electron] Non-Windows font command failed:', err)
       resolve({ success: false, fonts: [], error: err.message })
     })
   })

@@ -25,8 +25,9 @@ declare global {
       showInFolder: (path: string) => Promise<{ success: boolean; error?: string }>
       openPath: (path: string) => Promise<{ success: boolean; error?: string }>
       openGuide: () => Promise<{ success: boolean; error?: string }>
+      openExternal: (url: string) => Promise<{ success: boolean; error?: string }>
     }
   }
 }
 
-export {}
+export { }
