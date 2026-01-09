@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { IconApps, IconSettings, IconSync, IconDownload, IconCheckCircle, IconExclamationCircle, IconEdit } from '@arco-design/web-react/icon'
+import { IconApps, IconSettings, IconSync, IconDownload, IconCheckCircle, IconExclamationCircle, IconEdit, IconQuestionCircle } from '@arco-design/web-react/icon'
 import { Tooltip, Progress } from '@arco-design/web-react'
 import brandLogo from '@/assets/brand_logo.png'
 
@@ -13,6 +13,21 @@ export function AppHeader() {
     const [status, setStatus] = useState<UpdateStatus>('idle')
     const [progress, setProgress] = useState<number>(0)
     const [newVersion, setNewVersion] = useState<string>('')
+    const [errorMessage, setErrorMessage] = useState<string>('')
+
+    useEffect(() => {
+        const hasSeenIntro = localStorage.getItem('hasSeenIntro_v1.0.5');
+        if (!hasSeenIntro) {
+            setTimeout(() => {
+                window.electronAPI?.openIntro();
+            }, 1000);
+            localStorage.setItem('hasSeenIntro_v1.0.5', 'true');
+        }
+    }, []);
+
+    const handleShowIntro = () => {
+        window.electronAPI?.openIntro();
+    };
 
     useEffect(() => {
         const api = (window as any).electronAPI
@@ -21,14 +36,23 @@ export function AppHeader() {
             api.getAppVersion().then((v: string) => setAppVersion(v))
 
             // 监听更新事件
-            api.onCheckingForUpdate(() => setStatus('checking'))
+            api.onCheckingForUpdate(() => {
+                setStatus('checking')
+                setErrorMessage('')
+            })
 
             api.onUpdateAvailable((info: any) => {
                 setStatus('available')
                 setNewVersion(info.version)
             })
 
+            api.onUpdateNotAvailable((info: any) => {
+                console.log('Update check: No new version found.', info)
+                setStatus('idle')
+            })
+
             api.onDownloadProgress((prog: any) => {
+
                 setStatus('downloading')
                 setProgress(Math.floor(prog.percent))
             })
@@ -47,9 +71,8 @@ export function AppHeader() {
                 }
 
                 console.error('Update error:', err)
+                setErrorMessage(err)
                 setStatus('error')
-                // 3秒后恢复空闲状态，避免报错一直显示
-                setTimeout(() => setStatus('idle'), 5000)
             })
         }
     }, [])
@@ -70,8 +93,22 @@ export function AppHeader() {
 
         return (
             <div className="flex items-center gap-3 mr-4 transition-all">
-                {/* 版本号 */}
-                <span className="text-xs text-gray-400 font-mono">v{displayVersion}</span>
+                {/* 版本号 & 署名 */}
+                <div
+                    onClick={() => {
+                        if (status === 'checking') return
+                        const api = (window as any).electronAPI
+                        if (api && api.checkForUpdate) {
+                            console.log('Manually checking for update...')
+                            api.checkForUpdate()
+                        }
+                    }}
+                    className="flex flex-col items-end cursor-pointer group"
+                    title="点击检查更新"
+                >
+                    <span className="text-xs text-gray-400 font-mono group-hover:text-blue-500 transition-colors">v{displayVersion}</span>
+                    <span className="text-[10px] text-gray-400 scale-90 origin-right tracking-wider opacity-60">科技创新部</span>
+                </div>
 
                 {/* 状态反馈 */}
                 {status === 'checking' && (
@@ -115,8 +152,11 @@ export function AppHeader() {
                 )}
 
                 {status === 'error' && (
-                    <Tooltip content="更新检查失败，请检查网络">
-                        <IconExclamationCircle className="text-red-400" />
+                    <Tooltip content={`错误详情: ${errorMessage || '未知网络错误'}`}>
+                        <div className="flex items-center gap-1 text-xs text-red-600 bg-red-50 px-2 py-1 rounded-full cursor-help animate-pulse">
+                            <IconExclamationCircle />
+                            <span>更新中断</span>
+                        </div>
                     </Tooltip>
                 )}
             </div>
@@ -129,6 +169,15 @@ export function AppHeader() {
                 <img src={brandLogo} alt="成都兴城" className="h-8 object-contain" />
                 <div className="h-5 w-px bg-gray-300 mx-2"></div>
                 <span className="text-lg font-bold text-gray-800">公文格式化助手</span>
+
+                <Tooltip content="新功能介绍 / 使用指引">
+                    <div
+                        className="ml-2 text-gray-400 hover:text-blue-600 cursor-pointer transition-colors flex items-center"
+                        onClick={handleShowIntro}
+                    >
+                        <IconQuestionCircle style={{ fontSize: 18 }} />
+                    </div>
+                </Tooltip>
             </div>
 
             <div className="flex items-center">

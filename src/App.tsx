@@ -4,6 +4,7 @@ import HomePage from './pages/HomePage'
 const PageProfileEditor = lazy(() => import('./pages/PageProfileEditor').then(m => ({ default: m.PageProfileEditor })))
 const PageProfileList = lazy(() => import('./pages/PageProfileList').then(m => ({ default: m.PageProfileList })))
 const FontAssistantPage = lazy(() => import('./pages/FontAssistantPage').then(m => ({ default: m.FontAssistantPage })))
+const IntroPage = lazy(() => import('./pages/IntroPage').then(m => ({ default: m.IntroPage })))
 import { usePersistence } from './store/usePersistence'
 
 // 预设规范数据（去除页边距配置，使用 Word 默认页边距）
@@ -41,6 +42,7 @@ function App() {
           <Route path="/profiles/new" element={<PageProfileEditor />} />
           <Route path="/profiles/edit/:id" element={<PageProfileEditor />} />
           <Route path="/fonts" element={<FontAssistantPage />} />
+          <Route path="/intro" element={<IntroPage />} />
         </Routes>
       </Suspense>
     </HashRouter>

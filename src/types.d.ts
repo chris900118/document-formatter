@@ -36,6 +36,8 @@ declare global {
       onDownloadProgress: (callback: (progress: any) => void) => void
       onUpdateDownloaded: (callback: (info: any) => void) => void
       testMockUpdate: () => Promise<void>
+      openIntro: () => Promise<void>
+      closeIntro: () => Promise<void>
       quitAndInstall: () => void
     }
   }

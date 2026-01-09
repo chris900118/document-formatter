@@ -31,6 +31,7 @@ const appSettingsStore = new Store({
 
 let mainWindow: BrowserWindow | null = null
 let guideWindow: BrowserWindow | null = null
+let introWindow: BrowserWindow | null = null
 
 function createWindow() {
   // 使用 .cjs 扩展名
@@ -204,6 +205,46 @@ function openGuideWindow() {
 
   guideWindow.on('closed', () => {
     guideWindow = null
+  })
+  guideWindow.on('closed', () => {
+    guideWindow = null
+  })
+}
+
+function createIntroWindow() {
+  if (introWindow && !introWindow.isDestroyed()) {
+    introWindow.focus()
+    return
+  }
+
+  introWindow = new BrowserWindow({
+    width: 900,
+    height: 620,
+    title: '欢迎使用 - 兴城公文格式化助手',
+    autoHideMenuBar: true,
+    resizable: false,
+    maximizable: false,
+    frame: true, // Standard window frame
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.cjs'),
+      nodeIntegration: false,
+      contextIsolation: true
+    }
+  })
+
+  // Use hash routing for intro page
+  const introUrl = isDev
+    ? 'http://localhost:5173/#/intro'
+    : `file://${path.join(__dirname, '../dist/index.html')}#/intro`
+
+  console.log('[Intro] Loading URL:', introUrl)
+  introWindow.loadURL(introUrl)
+
+  // Remove menu (standard behavior for dialogs)
+  introWindow.setMenu(null)
+
+  introWindow.on('closed', () => {
+    introWindow = null
   })
 }
 
@@ -609,6 +650,19 @@ ipcMain.handle('app:openGuide', async () => {
   }
 })
 
+ipcMain.handle('app:openIntro', () => {
+  createIntroWindow()
+  return { success: true }
+})
+
+ipcMain.handle('app:closeIntro', () => {
+  if (introWindow && !introWindow.isDestroyed()) {
+    introWindow.close()
+  }
+})
+
+
+
 // Check missing fonts
 ipcMain.handle('system:checkMissingFonts', async () => {
   // Placeholder implementing actual logic if needed later or relying on frontend checks
@@ -642,6 +696,23 @@ ipcMain.handle('system:installFont', async (_event, fontFileName: string) => {
 ipcMain.handle('system:getAppVersion', () => {
   return app.getVersion()
 })
+
+// 手动检查更新
+ipcMain.handle('system:checkForUpdate', async () => {
+  try {
+    await autoUpdater.checkForUpdates()
+    return { success: true }
+  } catch (error: any) {
+    return { success: false, error: error.message }
+  }
+})
+
+
+// 开发环境强制启用更新检查
+if (isDev) {
+  autoUpdater.forceDevUpdateConfig = true
+  console.log('Development Mode: AutoUpdater forceDevUpdateConfig enabled')
+}
 
 // Auto Updater Events
 const sendToWindow = (channel: string, ...args: any[]) => {

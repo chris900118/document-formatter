@@ -1,6 +1,6 @@
 {
   "name": "document-formatter",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "公文格式化助手 - 基于 Electron + React 的文档格式化工具",
   "main": "dist-electron/main.js",
   "type": "module",
@@ -60,9 +60,8 @@
     "productName": "公文格式化助手",
     "publish": [
       {
-        "provider": "github",
-        "owner": "chris900118",
-        "repo": "document-formatter"
+        "provider": "generic",
+        "url": "https://app-updates-1301425432.cos.ap-chengdu.myqcloud.com/"
       }
     ],
     "compression": "maximum",
@@ -105,10 +104,6 @@
         "filter": [
           "**/*"
         ]
-      },
-      {
-        "from": "resources/introduction.html",
-        "to": "程序功能介绍.html"
       },
       {
         "from": "resources/fonts",

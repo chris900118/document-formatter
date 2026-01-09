@@ -17,13 +17,17 @@ const api = Object.freeze({
   checkMissingFonts: () => safeIpcInvoke('system:checkMissingFonts'),
   installFont: (fontFileName) => safeIpcInvoke('system:installFont', fontFileName),
   getAppVersion: () => safeIpcInvoke('system:getAppVersion'),
+  checkForUpdate: () => safeIpcInvoke('system:checkForUpdate'),
+
   onCheckingForUpdate: (callback) => ipcRenderer.on('checking-for-update', (_event) => callback()),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', (_event, info) => callback(info)),
   onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', (_event, info) => callback(info)),
   onUpdateError: (callback) => ipcRenderer.on('update-error', (_event, error) => callback(error)),
   onDownloadProgress: (callback) => ipcRenderer.on('download-progress', (_event, progress) => callback(progress)),
   onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', (_event, info) => callback(info)),
-  testMockUpdate: () => safeIpcInvoke('test:mockUpdate'),
+  testMockUpdate: () => ipcRenderer.invoke('test:mockUpdate'),
+  openIntro: () => ipcRenderer.invoke('app:openIntro'),
+  closeIntro: () => ipcRenderer.invoke('app:closeIntro'),
   quitAndInstall: () => ipcRenderer.send('update:quitAndInstall'),
 })
 

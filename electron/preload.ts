@@ -17,13 +17,17 @@ const api = Object.freeze({
   checkMissingFonts: () => safeInvoke('system:checkMissingFonts'),
   installFont: (fontFileName: string) => safeInvoke('system:installFont', fontFileName),
   getAppVersion: () => safeInvoke('system:getAppVersion'),
+  checkForUpdate: () => safeInvoke('system:checkForUpdate'),
+
   onCheckingForUpdate: (callback: () => void) => ipcRenderer.on('checking-for-update', (_event) => callback()),
   onUpdateAvailable: (callback: (info: any) => void) => ipcRenderer.on('update-available', (_event, info) => callback(info)),
   onUpdateNotAvailable: (callback: (info: any) => void) => ipcRenderer.on('update-not-available', (_event, info) => callback(info)),
   onUpdateError: (callback: (error: string) => void) => ipcRenderer.on('update-error', (_event, error) => callback(error)),
   onDownloadProgress: (callback: (progress: any) => void) => ipcRenderer.on('download-progress', (_event, progress) => callback(progress)),
   onUpdateDownloaded: (callback: (info: any) => void) => ipcRenderer.on('update-downloaded', (_event, info) => callback(info)),
-  testMockUpdate: () => safeInvoke('test:mockUpdate'),
+  testMockUpdate: () => ipcRenderer.invoke('test:mockUpdate'),
+  openIntro: () => ipcRenderer.invoke('app:openIntro'),
+  closeIntro: () => ipcRenderer.invoke('app:closeIntro'),
   quitAndInstall: () => ipcRenderer.send('update:quitAndInstall'),
 })
 
