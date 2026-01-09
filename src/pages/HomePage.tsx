@@ -6,7 +6,7 @@ import {
   IconUpload, IconCheckCircle, IconExclamationCircle
 } from '@arco-design/web-react/icon'
 import { useProfileStore } from '@/store/profileStore'
-import { useNavigate } from 'react-router-dom'
+
 import { AppHeader } from '@/components/AppHeader'
 
 // --- 类型定义 ---
@@ -28,7 +28,6 @@ interface ScanItem {
 
 export default function HomePage() {
   const { profiles, selectedProfileId, selectProfile } = useProfileStore()
-  const navigate = useNavigate()
   const [isScanning, setIsScanning] = useState(false)
   const [scanReport, setScanReport] = useState<ScanItem[]>([])
   const [mappings, setMappings] = useState<Record<string, string>>({})
