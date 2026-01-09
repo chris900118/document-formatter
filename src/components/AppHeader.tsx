@@ -39,6 +39,13 @@ export function AppHeader() {
             })
 
             api.onUpdateError((err: string) => {
+                // 忽略 404 错误（通常意味着没有发布版本），视为已经是最新
+                if (err.includes('404') || err.includes('net::ERR_HTTP_RESPONSE_CODE_FAILURE')) {
+                    console.warn('Update check: Release not found (404), assuming latest version.', err)
+                    setStatus('idle')
+                    return
+                }
+
                 console.error('Update error:', err)
                 setStatus('error')
                 // 3秒后恢复空闲状态，避免报错一直显示
