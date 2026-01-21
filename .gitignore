@@ -40,6 +40,8 @@ python_processor/dist/
 # 除非你想让别人不用配置 Python 环境也能跑，否则建议忽略
 scripts/*.exe
 scripts/formatter
+!scripts/formatter.exe
+!scripts/formatter
 
 # --- 日志文件 ---
 *.log

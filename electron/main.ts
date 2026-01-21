@@ -30,7 +30,7 @@ const appSettingsStore = new Store({
 })
 
 let mainWindow: BrowserWindow | null = null
-let guideWindow: BrowserWindow | null = null
+
 let introWindow: BrowserWindow | null = null
 
 function createWindow() {
@@ -153,63 +153,12 @@ function createWindow() {
   if (isFirstLaunch) {
     // 延迟打开，确保主窗口已经加载完成
     setTimeout(() => {
-      openGuideWindow()
+      createIntroWindow()
       appSettingsStore.set('isFirstLaunch', false)
     }, 1000)
   }
 }
 
-// 创建功能介绍窗口
-function openGuideWindow() {
-  // 如果已经打开，则聚焦
-  if (guideWindow && !guideWindow.isDestroyed()) {
-    guideWindow.focus()
-    return
-  }
-
-  guideWindow = new BrowserWindow({
-    width: 1000,
-    height: 700,
-    title: '程序功能介绍',
-    autoHideMenuBar: true,
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true
-    }
-  })
-
-  // 加载功能介绍 HTML 文件
-  let guidePath: string
-  if (isDev) {
-    // 开发环境下从源文件读取
-    guidePath = path.join(__dirname, '../resources/introduction.html')
-  } else {
-    // 生产环境从 resources 目录读取
-    guidePath = path.join(process.resourcesPath, '程序功能介绍.html')
-  }
-
-  console.log('[Guide] Loading guide from:', guidePath)
-
-  if (fs.existsSync(guidePath)) {
-    guideWindow.loadFile(guidePath)
-  } else {
-    console.error('[Guide] 功能介绍文件不存在:', guidePath)
-    guideWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(`
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="UTF-8"><title>错误</title></head>
-      <body><h1>功能介绍文件未找到</h1><p>路径: ${guidePath}</p></body>
-      </html>
-    `))
-  }
-
-  guideWindow.on('closed', () => {
-    guideWindow = null
-  })
-  guideWindow.on('closed', () => {
-    guideWindow = null
-  })
-}
 
 function createIntroWindow() {
   if (introWindow && !introWindow.isDestroyed()) {
@@ -640,16 +589,7 @@ ipcMain.handle('system:getFonts', async () => {
   })
 })
 
-// 打开功能介绍窗口（供前端调用）
-ipcMain.handle('app:openGuide', async () => {
-  try {
-    openGuideWindow()
-    return { success: true }
-  } catch (error: any) {
-    return { success: false, error: error.message }
-  }
-})
-
+// IPC Handlers
 ipcMain.handle('app:openIntro', () => {
   createIntroWindow()
   return { success: true }
@@ -659,6 +599,7 @@ ipcMain.handle('app:closeIntro', () => {
   if (introWindow && !introWindow.isDestroyed()) {
     introWindow.close()
   }
+  return { success: true }
 })
 
 

@@ -159,7 +159,7 @@ export const DEFAULT_PROFILE: FormatProfile = {
  */
 export const WENLV_PROFILE: FormatProfile = {
   id: 'preset_wenlv_standard',
-  name: '文旅局公文规范',
+  name: '文旅集团公文规范',
   description: '符合文旅系统公文格式要求',
   isDefault: false,
   createdAt: '2024-03-20T00:00:00Z',
@@ -173,7 +173,7 @@ export const WENLV_PROFILE: FormatProfile = {
       bold: true,
     },
     body: {
-      fontFamily: '仿宋_GB2312',
+      fontFamily: '仿宋',
       fontSize: 16,
       lineSpacing: 28,
       alignment: 'justify',
@@ -189,7 +189,7 @@ export const WENLV_PROFILE: FormatProfile = {
       firstLineIndent: 2,
     },
     heading2: {
-      fontFamily: '楷体_GB2312',
+      fontFamily: '楷体',
       fontSize: 16,
       lineSpacing: 28,
       alignment: 'left',
@@ -197,7 +197,7 @@ export const WENLV_PROFILE: FormatProfile = {
       firstLineIndent: 2,
     },
     heading3: {
-      fontFamily: '仿宋_GB2312',
+      fontFamily: '仿宋',
       fontSize: 16,
       lineSpacing: 28,
       alignment: 'left',
@@ -205,7 +205,7 @@ export const WENLV_PROFILE: FormatProfile = {
       firstLineIndent: 2,
     },
     heading4: {
-      fontFamily: '仿宋_GB2312',
+      fontFamily: '仿宋',
       fontSize: 16,
       lineSpacing: 28,
       alignment: 'left',

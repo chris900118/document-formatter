@@ -1,6 +1,6 @@
 {
   "name": "document-formatter",
-  "version": "1.0.5",
+  "version": "1.0.8",
   "description": "公文格式化助手 - 基于 Electron + React 的文档格式化工具",
   "main": "dist-electron/main.js",
   "type": "module",
@@ -66,14 +66,23 @@
     ],
     "compression": "maximum",
     "directories": {
-      "output": "release"
+      "output": "release/v${version}"
     },
     "files": [
       "dist/**/*",
       "dist-electron/**/*"
     ],
     "afterPack": "scripts/afterPack-optimize.cjs",
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": true
+    },
     "win": {
+      "icon": "build/icon.png",
       "target": [
         {
           "target": "nsis",
@@ -102,9 +111,13 @@
         "from": "scripts",
         "to": "scripts",
         "filter": [
-          "**/*"
+          "**/*",
+          "!formatter.exe",
+          "!formatter"
         ]
       },
+      "scripts/formatter.exe",
+      "scripts/formatter",
       {
         "from": "resources/fonts",
         "to": "fonts"

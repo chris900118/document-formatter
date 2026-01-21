@@ -637,6 +637,21 @@ def format_document(input_path, profile, output_path, mappings=None, text_replac
             # 兼容前端别名：title/normal -> documentTitle/body
             alias_map = { 'title': 'documentTitle', 'normal': 'body' }
             style_key = alias_map.get(style_key, style_key)
+
+            # --- 关键：先应用 Word 内置样式，防止覆盖后续的直接格式 ---
+            style_name_map = {
+                'documentTitle': 'Title',
+                'heading1': 'Heading 1',
+                'heading2': 'Heading 2',
+                'heading3': 'Heading 3',
+                'heading4': 'Heading 4',
+                'body': 'Normal'
+            }
+            if style_key in style_name_map:
+                try:
+                    para.style = style_name_map[style_key]
+                except Exception:
+                    pass
             
             # 应用自动编号（受开关控制，且样式中需启用numbering）
             # 注意：这会修改段落文本，必须在后续格式应用之前执行
@@ -670,16 +685,25 @@ def format_document(input_path, profile, output_path, mappings=None, text_replac
             if "alignment" in style_config:
                 para_format.alignment = alignment_map.get(style_config["alignment"], WD_ALIGN_PARAGRAPH.LEFT)
             
-            # 缩进（单位：字符，需转换为厘米）
-            char_width = 0.42  # 每个中文字符约0.42cm（基于四号字）
+            # 缩进（使用字符单位解决误差）
             if "firstLineIndent" in style_config:
                 indent_chars = style_config["firstLineIndent"]
-                para_format.first_line_indent = Cm(indent_chars * char_width)
+                # 直接通过 XML 设置字符单位缩进 (100 = 1 字符)
+                pPr = para._element.get_or_add_pPr()
+                ind = pPr.get_or_add_ind()
+                ind.set(qn('w:firstLineChars'), str(int(indent_chars * 100)))
+                # 必须清除绝对单位的缩进设置，否则 Word 会优先使用它
+                para_format.first_line_indent = None
             
             # 行距：数值<=3 视为倍数，否则按磅数
             if "lineSpacing" in style_config and style_config["lineSpacing"] is not None:
                 ls = style_config["lineSpacing"]
                 try:
+                    pPr = para._element.get_or_add_pPr()
+                    # 禁用网格对齐，确保磅数设置绝对精确 (1px 误差通常由于对齐网格引起)
+                    snap = pPr.get_or_add_snapToGrid()
+                    snap.set(qn('w:val'), '0')
+                    
                     if isinstance(ls, (int, float)) and ls <= 3:
                         para_format.line_spacing = float(ls)
                     else:
@@ -691,11 +715,21 @@ def format_document(input_path, profile, output_path, mappings=None, text_replac
             if "spaceBefore" in style_config and style_config["spaceBefore"] is not None:
                 try:
                     para_format.space_before = Pt(float(style_config["spaceBefore"]))
+                    # 清理 Word 可能残留的“行”单位间距属性，防止干扰
+                    pPr = para._element.get_or_add_pPr()
+                    spacing = pPr.get_or_add_spacing()
+                    if spacing.get(qn('w:beforeLines')):
+                        spacing.attrib.pop(qn('w:beforeLines'))
                 except Exception:
                     pass
             if "spaceAfter" in style_config and style_config["spaceAfter"] is not None:
                 try:
                     para_format.space_after = Pt(float(style_config["spaceAfter"]))
+                    # 同上，清理“行”单位间距属性
+                    pPr = para._element.get_or_add_pPr()
+                    spacing = pPr.get_or_add_spacing()
+                    if spacing.get(qn('w:afterLines')):
+                        spacing.attrib.pop(qn('w:afterLines'))
                 except Exception:
                     pass
 
@@ -755,20 +789,7 @@ def format_document(input_path, profile, output_path, mappings=None, text_replac
                     except Exception:
                         pass
             
-            # 应用Word内置样式名（关键：真正改变段落样式属性）
-            style_name_map = {
-                'documentTitle': 'Title',
-                'heading1': 'Heading 1',
-                'heading2': 'Heading 2',
-                'heading3': 'Heading 3',
-                'heading4': 'Heading 4',
-                'body': 'Normal'
-            }
-            if style_key in style_name_map:
-                try:
-                    para.style = style_name_map[style_key]
-                except Exception:
-                    pass
+            # (已移动到循环起始处)
 
             # 再次移除自动编号，避免样式切换引入的编号定义残留
             try:
